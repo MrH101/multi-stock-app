@@ -87,7 +87,7 @@ METHOD = (
 
 
 class Order(models.Model):
-    user = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True, blank=True)
+    user = models.ForeignKey(Customer, on_delete=models.CASCADE,related_name="orders", null=True, blank=True)
     first_name =models.CharField(max_length=255,null=True,blank=True)
     last_name = models.CharField(max_length=255,blank=True, null=True) 
     email = models.EmailField(max_length=255,null=True, blank=True)
