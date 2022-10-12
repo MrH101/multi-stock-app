@@ -59,8 +59,8 @@
                            <div  class="div-table-col edit">Quantity</div>
                            <div  class="div-table-col edit">Total Price</div>
                         </div>
-                        {% for item in details.items.all %}
-                        {% if item.customer == request.user.customer %}
+                        {% for item in order.items.all %}
+                        {% if item.customers == request.user.customer %}
                        <div class="div-table-row">
                         <div class="div-table-col edit2">{{ item.product.vendor }}</div>
                         <div class="div-table-col edit2">{{ item.product.title }}</div>
