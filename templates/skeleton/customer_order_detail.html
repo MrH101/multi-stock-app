@@ -59,7 +59,9 @@
                            <div  class="div-table-col edit">Total Price</div>
                         </div>
                         {% for item in details.items.all %}
+                        <!--Line below changes everything-->
                         {% if item.user == request.user.user %}
+                        <!--Line above changes everything-->
                        <div class="div-table-row">
                         <div class="div-table-col edit2">{{ item.product.vendor }}</div>
                         <div class="div-table-col edit2">{{ item.product.title }}</div>
