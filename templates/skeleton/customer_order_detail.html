@@ -61,7 +61,7 @@
                            <div  class="div-table-col edit">Total Price</div>
                         </div>
                         {% for item in cart %}
-                        {% if item.customer == request.user.customer %}
+                        {% if user == request.user.customer %}
                         <tr>
                           <td>{{forloop.counter}}</td>
                           <td>{{item.product.vendor}}</td>
