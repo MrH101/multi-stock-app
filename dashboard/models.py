@@ -59,7 +59,8 @@ class Product(models.Model):
     pack_size = models.CharField(max_length=255,null=True,blank=True)
     quantity = models.PositiveIntegerField(default=1)
     expiry_date = models.DateField(blank=True,null=True, help_text='date in format yyyy-mm-dd')
-
+    user = models.ForeignKey(Customer, related_name="items", on_delete=models.CASCADE,null=True,blank=True)
+    
     class Meta:
         ordering = ['-added_date']
 
