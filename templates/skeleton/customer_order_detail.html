@@ -56,16 +56,14 @@
                             <div class="div-table-col edit">Supplier</div>
                            <div class="div-table-col edit">Product</div>
                            <div class="div-table-col edit">Category</div>
-                           <div  class="div-table-col edit">Price</div>
                            <div  class="div-table-col edit">Quantity</div>
                            <div  class="div-table-col edit">Total Price</div>
                         </div>
                         {% for item in details.items.all %}
-                        {% if user == request.user.customer %}
+                        {% if item.user == request.user.user %}
                        <div class="div-table-row">
                         <div class="div-table-col edit2">{{ item.product.vendor }}</div>
                         <div class="div-table-col edit2">{{ item.product.title }}</div>
-                        <div class="div-table-col edit2">${{ item.product.price }}</div>
                         <div class="div-table-col edit2">{{ item.quantity }}</div>
                         <div class="div-table-col edit2">${{ item.get_total_price }}</div>
                        </div>
