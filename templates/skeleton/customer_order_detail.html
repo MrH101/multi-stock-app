@@ -55,12 +55,25 @@
                         <div class="div-table-row">
                             <div class="div-table-col edit">Supplier</div>
                            <div class="div-table-col edit">Product</div>
+                           <div class="div-table-col edit">Category</div>
                            <div  class="div-table-col edit">Price</div>
                            <div  class="div-table-col edit">Quantity</div>
                            <div  class="div-table-col edit">Total Price</div>
                         </div>
-                        {% for item in order.items.all %}
+                        {% for item in cart %}
                         {% if item.customer == request.user.customer %}
+                        <tr>
+                          <td>{{forloop.counter}}</td>
+                          <td>{{item.product.vendor}}</td>
+                          <td>{{item.product.title}}</td>
+                          <td>{{item.product.category}}</td>
+                          <td>{{item.price}}</td>
+                          <td>{{item.quantity}}</td>
+                          <td>${{ item.total_price }}</td>
+                         
+                        </tr>
+                        
+                        <!--
                        <div class="div-table-row">
                         <div class="div-table-col edit2">{{ item.product.vendor }}</div>
                         <div class="div-table-col edit2">{{ item.product.title }}</div>
@@ -68,6 +81,7 @@
                         <div class="div-table-col edit2">{{ item.quantity }}</div>
                         <div class="div-table-col edit2">${{ item.get_total_price }}</div>
                        </div>
+                       -->
                        {% endif %}
                        {% endfor %}
                     </div>
