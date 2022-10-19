@@ -43,8 +43,11 @@ class Vendor(User):
     
 class Customer(User):
     created_at = models.DateTimeField(auto_now_add=True,null=True,blank=True)
-    
-    
+    # added the 2 fields below
+    pharmacy_name = models.CharField(max_length=255,null=True,blank=True)
+    contact_person = models.CharField(max_length=255,blank=True, null=True) 
+
+
 #admin and customer models
 #Products model
 class Product(models.Model):
