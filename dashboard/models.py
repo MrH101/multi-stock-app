@@ -88,8 +88,8 @@ METHOD = (
 
 class Order(models.Model):
     user = models.ForeignKey(Customer, on_delete=models.CASCADE,related_name="orders", null=True, blank=True)
-    first_name =models.CharField(max_length=255,null=True,blank=True)
-    last_name = models.CharField(max_length=255,blank=True, null=True) 
+    pharmacy_name =models.CharField(max_length=255,null=True,blank=True)
+    contact_person = models.CharField(max_length=255,blank=True, null=True) 
     email = models.EmailField(max_length=255,null=True, blank=True)
     phone = models.CharField(max_length=255,blank=True, null=True)
     address = models.CharField(max_length=255,null=True,blank=True)

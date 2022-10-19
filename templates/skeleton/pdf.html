@@ -26,7 +26,8 @@
                             {% for orders in orders %}
                             <tr style="text-align: center;">
                                 <td>#ORDER_{{ orders.id}}</td>  
-                                <td>{{ orders.first_name }} {{orders.last_name}}</td>
+                                <!--changed last and firstname to pharmacy and contact person-->
+                                <td>{{ orders.pharmacy_name }} {{orders.contact_person}}</td>
                                 <td>{{ orders.created_at }}</td>
                                 <td>{{ orders.email }}</td>
                                 <td>{{ orders.phone }}</th>

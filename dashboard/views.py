@@ -424,13 +424,14 @@ def cart_details(request):
         form = Order()
        # amount=int(cart.get_total_cost() * 100), # Amount in Cents
         form.user = request.user.customer
-        form.first_name = request.POST.get('first_name')
-        form.last_name = request.POST.get('last_name')
+        form.pharmacy_name = request.POST.get('pharmacy_name')#changed first_name
+        form.contact_person = request.POST.get('contact_person')#changed last_name
         form.email = request.POST.get('email')
         form.phone = request.POST.get('phone')
         form.address = request.POST.get('address')
         
-        order = checkout(request, form.user, form.first_name, form.last_name, form.email, form.phone, form.address, cart.get_total_cost())
+        #removed form.first& last name
+        order = checkout(request, form.user, form.pharmacy_name, form.contact_person, form.email, form.phone, form.address, cart.get_total_cost())
         cart.clear()
         return redirect('success')
 

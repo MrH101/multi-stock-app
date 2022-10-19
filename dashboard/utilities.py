@@ -7,8 +7,9 @@ from django.template.loader import render_to_string
 
 from .models import Budget, Message, Order, OrderItem, RepliedMessage
 
-def checkout(request, user, first_name, last_name, email, phone,  address, amount):
-    order = Order.objects.create(user=user, first_name=first_name, last_name=last_name, email=email, phone=phone, address=address, paid_amount=amount)
+#chanaging last_name and first_name to contact_person and pharmacy_name
+def checkout(request, user, pharmacy_name, contact_person, email, phone,  address, amount):
+    order = Order.objects.create(user=user, pharmacy_name = pharmacy_name, contact_person=contact_person, email=email, phone=phone, address=address, paid_amount=amount)
 
     for item in Cart(request):
         OrderItem.objects.create(order=order, product=item['product'], vendor=item['product'].vendor, price=item['product'].price, quantity=item['quantity'])

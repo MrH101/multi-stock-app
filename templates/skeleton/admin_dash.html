@@ -31,7 +31,7 @@
                         <td>{{forloop.counter}}</td>
                        <!--<td><a href=" 'order_detail' order.id ">#ORDER_{{order.id}}</a></td>-->
                         <td><a href="{% url 's_order_detail' order.id %}">#ORDER_{{order.id}}</a></td>
-                        <td>{{order.first_name }} {{order.last_name}}</td>
+                        <td>{{order.pharmacy_name }} {{order.contact_person}}</td>
                         <td>{{order.created_at|timesince }}</td>
                         <td>
                             <a class="btn btn-danger btn-sm" href="{% url 'delete-order' order.id %}">Delete</a>

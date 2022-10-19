@@ -28,8 +28,8 @@ class CreateUserForm(UserCreationForm):
         fields = [
             'username',
             'email',
-            'first_name',
-            'last_name',
+            'pharmacy_name',
+            'contact_person',
             'password1',
             'password2',
             'is_superuser',
@@ -53,8 +53,8 @@ class ProductForm(forms.ModelForm):
         
 class CheckoutForm(forms.Form):
     
-    first_name = forms.CharField(max_length=255)
-    last_name = forms.CharField(max_length=255)
+    pharmacy_name = forms.CharField(max_length=255)
+    contact_person = forms.CharField(max_length=255)
     email = forms.EmailField(max_length=255)
     phone = forms.CharField(max_length=255)
     address = forms.CharField(max_length=255)
