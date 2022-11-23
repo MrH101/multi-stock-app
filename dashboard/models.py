@@ -112,11 +112,9 @@ class Order(models.Model):
     payment_method = models.CharField(
         max_length=200, choices=METHOD, default="Cash On Delivery")
     order_status = models.CharField(max_length=50, choices=ORDER_STATUS, null=True,blank=True, default='received')
-    inventory_updated = models.BooleanField(default=False)
-    
     class Meta:
         ordering = ['-created_at']
-
+    inventory_updated = models.BooleanField(default=False)
     
 
     def __str__(self):
