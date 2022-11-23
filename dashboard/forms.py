@@ -60,5 +60,5 @@ class CheckoutForm(forms.Form):
     address = forms.CharField(max_length=255)
          
 class AddToCartForm(forms.Form):
-    quantity = forms.IntegerField(max_value=100)     
+    quantity = forms.IntegerField(max_value=10000)     
 
