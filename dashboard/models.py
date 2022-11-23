@@ -73,15 +73,25 @@ class Product(models.Model):
         notify_before = self.expiry_date - timedelta(days = 15)
         return notify_before
     
+    def has_inventory(self):
+        return self.inventory > 0 # True or False
     
+    def remove_items_from_inventory(self, save=True):
+        current_inv = self.quantity
+        current_inv -= OrderItem.quantity
+        self.quantity = current_inv
+        if save == True:
+            self.save()
+        return self.quantity 
        
 #Orders Model 
+#Orders Model 
 ORDER_STATUS = (
-    ("Order Received", "Order Received"),
-    ("Order Processing", "Order Processing"),
-    ("On the way", "On the way"),
-    ("Order Completed", "Order Completed"),
-    ("Order Canceled", "Order Canceled"),
+    ("received", "Order Received"),
+    ("processing", "Order Processing"),
+    ("way", "On the way"),
+    ("completed", "Order Completed"),
+    ("canceled", "Order Canceled"),
 )
 
 METHOD = (
@@ -101,12 +111,34 @@ class Order(models.Model):
     vendors = models.ManyToManyField(Vendor, related_name="orders", null=True, blank=True)
     payment_method = models.CharField(
         max_length=200, choices=METHOD, default="Cash On Delivery")
-    order_status = models.CharField(max_length=50, choices=ORDER_STATUS, null=True,blank=True, default='Order Received')
+    order_status = models.CharField(max_length=50, choices=ORDER_STATUS, null=True,blank=True, default='received')
+    inventory_updated = models.BooleanField(default=False)
+    
     class Meta:
         ordering = ['-created_at']
 
+    
+
     def __str__(self):
         return self.first_name
+
+    def order_received(self,save=False):
+        self.order_status = 'received'
+        if not self.inventory_updated and Product:
+            Product.remove_items_from_inventory(self,save=True)
+            self.inventory_updated = True
+        if save == True:
+            self.save()
+        return self.order_status
+
+    def order_completed(self,save=False):
+        self.order_status = 'completed'
+        if not self.inventory_updated and Product:
+            Product.remove_items_from_inventory(self,save=True)
+            self.inventory_updated = True
+        if save == True:
+            self.save()
+        return self.order_status
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name="items", on_delete=models.CASCADE,null=True,blank=True)

@@ -153,16 +153,24 @@ def viewProduct(request, product_slug):
     product = get_object_or_404(Product, slug=product_slug)
     # Check whether the AddToCart button is clicked or not
     if request.method == 'POST':
+
         form = AddToCartForm(request.POST)
+
         if form.is_valid():
             quantity = form.cleaned_data['quantity']
-            cart.add(product_id=product.id, quantity=quantity, update_quantity=True)
+            if product.quantity > 0 and product.quantity > quantity: 
+                cart.add(product_id=product.id, quantity=quantity, update_quantity=True)
+                product.quantity = product.quantity - quantity
+                product.save()
+                messages.success(request, "The product was added to the cart.")
+                return HttpResponse('<script>history.go(-2);</script>')    
 
-            messages.success(request, "The product was added to the cart.")
-            return HttpResponse('<script>history.go(-2);</script>')            
-    
+            else:
+                messages.warning(request, 'You cannot order more products than stocked.')
     else:
         form = AddToCartForm()
+       
+       # return quantity
 
     context = {
         'product': product,
