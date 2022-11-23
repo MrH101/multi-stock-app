@@ -34,6 +34,7 @@
                       <th scope="col">Batch Number</th>
                       <th scope="col">Category</th>
                       <th scope="col">Pack Size(grams)</th>
+                      <th scope="col">Quantity</th>
                       <th scope="col">Price(Each)</th>
                       <th scope="col">Expiry Date</th>
                       
@@ -48,14 +49,19 @@
                       <td>{{product.batch_number }}</td>
                       <td>{{product.category }}</td>
                       <td>{{product.pack_size }}</td>
+                      <td>{{product.quantity }}</td>
                       <td>$ {{product.price }}</td>
                       <td>{{product.expiry_date }}</td>
                      
                       <td>
                         {% if user.is_authenticated %}
-                        <a href="{% url 'view-product' product.slug %}" style='width:100px; font-size:14px;color:white;background-color:#ff5d68;text-align;cenetr;padding:8px 6px;' class='btn'>Add To Cart</a>
-                        {%else %}
-                        <a href="{% url 'login'%}" style='width:100px; font-size:14px;color:white;background-color:#ff2268;text-align;cenetr;padding:8px 6px;' class='btn '>Add To Cart</a>
+                          {% if product.quantity > 0  %}
+                          <a href="{% url 'view-product' product.slug %}" style='width:100px; font-size:14px;color:white;background-color:#ff5d68;text-align:center;padding:8px 6px;' class='btn'>Add To Cart</a>
+                          {%else%}
+                          <a href="{% url 'my-messages'  %}" style='width:100px; font-size:14px;color:white;background-color:#ff5d68;text-align:center;padding:8px 6px;' class='btn'>Product Out Of Stock</a>
+                          {%endif%}
+                          {%else %}
+                        <a href="{% url 'login'%}" style='width:100px; font-size:14px;color:white;background-color:#ff2268;text-align;center;padding:8px 6px;' class='btn '>Add To Cart</a>
                         {% endif %}
                       </td>
                   </tr>

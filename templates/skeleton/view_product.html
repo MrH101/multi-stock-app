@@ -26,6 +26,7 @@
                             <th scope="col">Product</th>
                             <th scope="col">Category</th>
                             <th scope="col">Pack Size</th>
+                            <th scope="col">Quantity</th>
                             <th scope='col'>Price</th>
                             <th scope="col">Supplier</th>
                         </tr>
@@ -36,6 +37,7 @@
                             <td>{{ product.title }}</td>
                             <td>{{ product.category }}</td>
                             <td>{{ product.pack_size }}</td>
+                            <td>{{ product.quantity }}</td>
                             <td>{{ product.price }}</td>
                             <td>{{product.vendor}}</td>
                             
@@ -58,10 +60,15 @@
             <div class="control">
                 <input type="number" name="quantity" placeholder='1' class="form-group" min="1" id="">
             </div>
-
+          
             <div class="control">
+                {% if  product.quantity < quantity %}
+                <p>you cant order more items than stocked</p>
+                {% else %}
                 <input class="btn btn-success is-dark" type='submit' value='Add to Cart' />
+                {% endif %}
             </div>
+            
         </div>
     </form>
 </div>
