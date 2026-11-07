@@ -44,6 +44,9 @@ class Order(TimestampMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     currency: Mapped[str] = mapped_column(String(3))
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    # Rates (per USD) in force at checkout, so budgets and reports convert at the rate actually used.
+    fx_rates: Mapped[dict | None] = mapped_column(JSON)
+    amount_usd: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
 
     lines: Mapped[list["OrderLine"]] = relationship(back_populates="order", cascade="all, delete-orphan")
     history: Mapped[list["OrderEvent"]] = relationship(back_populates="order", cascade="all, delete-orphan",

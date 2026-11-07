@@ -6,6 +6,7 @@ import { catalogApi } from "@/modules/catalog/api";
 import { ordersApi } from "@/modules/orders/api";
 import { InsightsWidget } from "@/modules/insights/InsightsWidget";
 import { useAccount } from "@/shared/auth/session";
+import { useDisplayCurrency } from "@/shared/currency";
 import { money } from "@/shared/format";
 import { ExpiryBadge } from "@/shared/ui";
 import { MonthlyChart, RecentOrders, StatCard } from "./widgets";
@@ -13,7 +14,8 @@ import { MonthlyChart, RecentOrders, StatCard } from "./widgets";
 export default function SupplierDashboard() {
   const { organization } = useAccount();
   const navigate = useNavigate();
-  const summary = useQuery({ queryKey: ["summary"], queryFn: ordersApi.summary });
+  const { currency } = useDisplayCurrency();
+  const summary = useQuery({ queryKey: ["summary", currency], queryFn: () => ordersApi.summary(currency) });
   const alerts = useQuery({ queryKey: ["alerts"], queryFn: () => catalogApi.alerts(180) });
   const s = summary.data;
   const a = alerts.data;

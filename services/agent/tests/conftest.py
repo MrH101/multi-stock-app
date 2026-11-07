@@ -70,6 +70,7 @@ class FakeSources:
         now = datetime.now(timezone.utc)
         self.snapshot = {
             "as_of": iso(TODAY), "demand_days": 90,
+            "fx": {"base": "USD", "rates": {"USD": "1", "ZWG": "26.8"}, "as_of": {"ZWG": iso(TODAY)}},
             "budgets": [{"pharmacy_org_id": 20, "period": iso(TODAY.replace(day=1)), "amount": "1000.00",
                          "currency": "USD", "committed": "1250.00", "remaining": "-250.00", "is_set": True,
                          "percent_used": 125.0, "days_elapsed": 10, "days_in_month": 30}],

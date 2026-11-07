@@ -30,6 +30,7 @@ class Settings(BaseServiceSettings):
     order_review_sla_hours: int = 24  # SUBMITTED -> ACCEPTED/REJECTED
     order_dispatch_sla_hours: int = 48  # ACCEPTED -> DISPATCHED
     order_delivery_sla_hours: int = 72  # DISPATCHED -> DELIVERED
+    fx_stale_days: int = 2  # warn operators when the ZiG rate hasn't been updated for this long
 
     # ---- Caimex (OpenAI-compatible gateway) for digests and the assistant
     caimex_api_key: str = ""

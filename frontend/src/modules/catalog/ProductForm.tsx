@@ -39,7 +39,7 @@ export function ProductForm({ initial, onSubmit, submitting, error, submitLabel 
           <Grid.Col span={{ base: 12, sm: 6 }}><Select label="MCAZ category" data={options(SCHEDULES)} allowDeselect={false} {...form.getInputProps("schedule")} /></Grid.Col>
           <Grid.Col span={{ base: 12, sm: 6 }}><TextInput label="MCAZ registration no." placeholder="As on the MCAZ register" description="Lets pharmacies confirm the product is registered" {...form.getInputProps("mcaz_registration_number")} /></Grid.Col>
           <Grid.Col span={{ base: 6, sm: 4 }}><NumberInput label="Unit price" required min={0} decimalScale={2} fixedDecimalScale {...form.getInputProps("unit_price")} /></Grid.Col>
-          <Grid.Col span={{ base: 6, sm: 2 }}><Select label="Currency" data={["USD", "ZWG", "ZAR"]} allowDeselect={false} {...form.getInputProps("currency")} /></Grid.Col>
+          <Grid.Col span={{ base: 6, sm: 2 }}><Select label="Currency" data={[{ value: "USD", label: "USD" }, { value: "ZWG", label: "ZiG" }, { value: "ZAR", label: "ZAR" }]} allowDeselect={false} {...form.getInputProps("currency")} /></Grid.Col>
           <Grid.Col span={{ base: 6, sm: 3 }}><TextInput label="Your SKU / code" {...form.getInputProps("sku")} /></Grid.Col>
           <Grid.Col span={{ base: 6, sm: 3 }}><NumberInput label="Reorder level" description="Alert when stock falls to this" min={0} {...form.getInputProps("reorder_level")} /></Grid.Col>
           <Grid.Col span={12}><Textarea label="Description / notes for pharmacies" autosize minRows={2} {...form.getInputProps("description")} /></Grid.Col>

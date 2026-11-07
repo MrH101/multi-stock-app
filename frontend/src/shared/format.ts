@@ -4,8 +4,13 @@ import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
 export function money(amount: string | number, currency = "USD") {
+  // ZiG (ISO code ZWG) is newer than most browsers' currency data, so label it the way people write it.
+  if (currency === "ZWG")
+    return `ZiG ${new Intl.NumberFormat("en-ZW", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(amount))}`;
   return new Intl.NumberFormat("en-ZW", { style: "currency", currency }).format(Number(amount));
 }
+
+export const CURRENCY_LABEL: Record<string, string> = { USD: "USD", ZWG: "ZiG", ZAR: "ZAR" };
 
 export const date = (d: string | null | undefined) => (d ? dayjs(d).format("D MMM YYYY") : "—");
 export const dateTime = (d: string) => dayjs(d).format("D MMM YYYY, HH:mm");

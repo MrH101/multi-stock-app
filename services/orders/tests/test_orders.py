@@ -99,3 +99,54 @@ def test_monitoring_snapshot(client, catalog):
     [demand] = snap["demand"]
     assert demand == {"pharmacy_org_id": 20, "supplier_org_id": 10, "product_id": 1, "product_name": "Amoxil 500mg",
                       "quantity": 3, "order_count": 2}
+
+
+ADMIN = token(99, 1, "PLATFORM", "Multi-Stock Platform")
+
+
+def set_rates(client, **rates):
+    return client.put("/admin/fx/rates", headers=ADMIN, json={"rates": rates, "source": "RBZ interbank"})
+
+
+def test_only_platform_admins_set_rates(client):
+    assert set_rates(client, ZWG="26.80").status_code == 200
+    assert client.put("/admin/fx/rates", headers=PHARMACY, json={"rates": {"ZWG": "27"}}).status_code == 403
+    assert client.put("/admin/fx/rates", headers=ADMIN, json={"rates": {"ZWG": "0"}}).status_code == 422
+    assert client.put("/admin/fx/rates", headers=ADMIN, json={"rates": {"EUR": "1"}}).status_code == 422
+    assert client.put("/admin/fx/rates", headers=ADMIN,
+                      json={"rates": {"ZWG": "27"}, "effective_date": "2999-01-01"}).status_code == 400
+    r = client.get("/fx/rates", headers=PHARMACY).json()
+    assert r["rates"] == {"USD": "1", "ZWG": "26.800000"} and r["source"]["ZWG"] == "RBZ interbank"
+    assert [h["per_usd"] for h in client.get("/admin/fx/history", headers=ADMIN).json()] == ["26.800000"]
+
+
+def test_mixed_currency_cart_splits_and_snapshots_rates(client):
+    set_rates(client, ZWG="26.80")
+    orders = checkout(client, [{"product_id": 1, "quantity": 2}, {"product_id": 4, "quantity": 1}]).json()
+    by_cur = {o["currency"]: o for o in orders}
+    assert set(by_cur) == {"USD", "ZWG"} and {o["supplier_org_id"] for o in orders} == {10}
+    assert by_cur["USD"]["subtotal"] == "25.00" and by_cur["USD"]["amount_usd"] == "25.00"
+    assert by_cur["ZWG"]["subtotal"] == "268.00" and by_cur["ZWG"]["amount_usd"] == "10.00"
+    assert by_cur["ZWG"]["fx_rates"]["ZWG"] == "26.800000"
+
+
+def test_budget_counts_every_currency_at_the_checkout_rate(client):
+    client.put("/budget", headers=PHARMACY, json={"amount": "1000.00", "currency": "ZWG"})
+    checkout(client, [{"product_id": 1, "quantity": 2}])  # USD 25.00 before any rate exists
+    b = client.get("/budget", headers=PHARMACY).json()
+    assert b["committed"] == "0.00" and b["unconverted_currencies"] == ["USD"]
+
+    set_rates(client, ZWG="26.80")
+    b = client.get("/budget", headers=PHARMACY).json()  # old order falls back to today's rate
+    assert b["committed"] == "670.00" and b["unconverted_currencies"] == []
+
+    checkout(client, [{"product_id": 1, "quantity": 2}])  # snapshots 26.80
+    set_rates(client, ZWG="30.00")  # rate moves after checkout
+    b = client.get("/budget", headers=PHARMACY).json()
+    assert b["committed"] == "1420.00"  # 25 * 30 (no snapshot) + 25 * 26.80 (snapshot)
+    assert round(b["percent_used"]) == 142
+
+    s = client.get("/orders/summary", headers=PHARMACY, params={"currency": "ZWG"}).json()
+    assert s["currency"] == "ZWG" and s["month_total"] == "1420.00"
+    usd = client.get("/orders/summary", headers=PHARMACY).json()
+    assert usd["month_total"] == "50.00"

@@ -6,7 +6,7 @@
 |---|---|---|
 | **identity** | Organisations (PHARMACY / SUPPLIER / PLATFORM), users, roles (OWNER / MANAGER / STAFF) | Registering creates an org + owner. Only owners manage the team. Platform admins verify licences and suspend orgs. |
 | **catalog** | Products, batches (batch no. + expiry), reservations, stock movement ledger | Expired batches are never sellable. Reservations allocate **FEFO** (first-expiry-first-out) and are all-or-nothing, with row locks on Postgres. Every stock change is written to an append-only ledger. |
-| **orders** | Purchase orders, lines (with allocated batches), status history, monthly budgets | One cart → **one PO per supplier**. If any supplier's reservation fails, earlier ones are released (compensation). Checkout is idempotent per cart key. |
+| **orders** | Purchase orders, lines (with allocated batches), status history, monthly budgets, exchange rates | One cart → **one PO per supplier and currency**. Each PO snapshots the USD/ZiG/ZAR rates at checkout; budgets and reports convert every order at its own rate. If any supplier's reservation fails, earlier ones are released (compensation). Checkout is idempotent per cart key. |
 | **notifications** | Notifications (per-user read state), conversations, broadcasts, WebSocket | Consumes order and agent events. Suppliers broadcast only to pharmacies. |
 | **agent** | Alerts, briefings (digests), monitor runs | Reads other services only through `/internal/monitoring/*` snapshots (service token). Publishes `agent.alert` events, and notifications delivers them. |
 

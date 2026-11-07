@@ -22,7 +22,7 @@ from .sources import SourceError, Sources
 log = logging.getLogger("engine")
 
 LIVE = (AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED)
-DOMAINS_FROM = {"inventory": {"stock", "expiry"}, "orders": {"order", "budget"}}
+DOMAINS_FROM = {"inventory": {"stock", "expiry"}, "orders": {"order", "budget", "fx"}}
 
 
 def now_utc() -> datetime:
@@ -260,6 +260,8 @@ class Monitor:
         platform_id = next((o["id"] for o in orgs if o["type"] == "PLATFORM"), None) or self._platform_id
         self._platform_id = platform_id
         findings += rules.platform_health(platform_id, health, errors, self.llm.enabled, self.llm.stats.last_error)
+        if snapshot is not None:
+            findings += rules.fx_freshness(platform_id, snapshot.get("fx"), cfg)
         if org_by_id:  # don't alert suspended organisations
             findings = [f for f in findings if org_by_id.get(f.org_id, {}).get("is_active", True)]
 

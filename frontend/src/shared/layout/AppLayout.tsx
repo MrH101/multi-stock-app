@@ -2,7 +2,7 @@ import { AppShell, Avatar, Badge, Burger, Button, Group, Menu, NavLink, Text, Th
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconBuildingStore, IconChevronDown, IconClipboardList, IconLayoutDashboard, IconLogout, IconMessages,
-  IconActivity, IconPackage, IconPlus, IconSearch, IconSparkles, IconSettings, IconShieldCheck, IconShoppingCart, IconSpeakerphone, IconUsers,
+  IconActivity, IconCurrencyDollar, IconPackage, IconPlus, IconSearch, IconSparkles, IconSettings, IconShieldCheck, IconShoppingCart, IconSpeakerphone, IconUsers,
 } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -11,6 +11,7 @@ import { messagingApi } from "@/modules/messaging/api";
 import { NotificationBell } from "@/modules/messaging/NotificationBell";
 import { cartCount, useCart } from "@/modules/orders/cart";
 import { useAccount, useSession } from "@/shared/auth/session";
+import { CurrencySwitch } from "@/shared/currency";
 import { useRealtime } from "@/shared/realtime";
 
 interface NavItem {
@@ -59,6 +60,7 @@ export function AppLayout() {
           { to: "/monitoring", label: "Monitoring", icon: IconActivity, badge: urgent },
           { to: "/insights", label: "Ask the assistant", icon: IconSparkles },
           { to: "/orders", label: "All orders", icon: IconClipboardList },
+          { to: "/rates", label: "Exchange rates", icon: IconCurrencyDollar },
           { to: "/announcements", label: "Announcements", icon: IconSpeakerphone },
         ];
   nav.push({ to: "/team", label: "Team", icon: IconUsers }, { to: "/settings", label: "Settings", icon: IconSettings });
@@ -96,6 +98,7 @@ export function AppLayout() {
                 Cart{cartCount(lines) ? ` · ${cartCount(lines)}` : ""}
               </Button>
             )}
+            {!isAdmin && <Group visibleFrom="sm"><CurrencySwitch /></Group>}
             <NotificationBell />
             <Menu position="bottom-end" width={220}>
               <Menu.Target>

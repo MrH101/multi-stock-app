@@ -31,7 +31,8 @@ export function BudgetCard() {
         <Stack gap={6}>
           <Text size="xl" fw={700}>{money(b.remaining, b.currency)} <Text span size="sm" c="dimmed" fw={400}>left of {money(b.amount, b.currency)}</Text></Text>
           <Progress value={pct} color={pct >= 100 ? "red" : pct >= 80 ? "orange" : "teal"} size="lg" radius="xl" />
-          <Text size="xs" c="dimmed">{money(b.committed, b.currency)} committed in open and delivered orders ({b.percent_used.toFixed(0)}%)</Text>
+          <Text size="xs" c="dimmed">{money(b.committed, b.currency)} committed in open and delivered orders, all currencies converted at the rate on the day ({b.percent_used.toFixed(0)}%)</Text>
+          {b.unconverted_currencies.length > 0 && <Text size="xs" c="orange">Orders in {b.unconverted_currencies.join(", ")} aren't counted yet: no exchange rate has been set.</Text>}
         </Stack>
       ) : (
         <Text size="sm" c="dimmed">No budget set. {canManage ? "Set one to get a warning before you overspend." : "Ask your manager to set one."}</Text>
@@ -41,7 +42,7 @@ export function BudgetCard() {
           {save.error && <ErrorNotice error={save.error} title="Not saved" />}
           <Group grow>
             <NumberInput label="Amount" min={0} decimalScale={2} value={amount} onChange={setAmount} autoFocus />
-            <Select label="Currency" data={["USD", "ZWG", "ZAR"]} value={currency} onChange={(v) => v && setCurrency(v)} allowDeselect={false} />
+            <Select label="Currency" data={[{ value: "USD", label: "USD" }, { value: "ZWG", label: "ZiG" }, { value: "ZAR", label: "ZAR" }]} value={currency} onChange={(v) => v && setCurrency(v)} allowDeselect={false} />
           </Group>
           <Group justify="flex-end"><Button variant="default" onClick={close}>Cancel</Button><Button loading={save.isPending} onClick={() => save.mutate()}>Save</Button></Group>
         </Stack>

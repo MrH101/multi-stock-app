@@ -6,7 +6,8 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useCart } from "@/modules/orders/cart";
-import { DOSAGE_FORMS, SCHEDULES, SCHEDULE_BADGE, date, money, options } from "@/shared/format";
+import { Money } from "@/shared/currency";
+import { DOSAGE_FORMS, SCHEDULES, SCHEDULE_BADGE, date, options } from "@/shared/format";
 import { EmptyState, ErrorNotice, ExpiryBadge, Loading, PageHeader, StockBadge } from "@/shared/ui";
 import { catalogApi, type Product } from "./api";
 
@@ -119,7 +120,7 @@ function ProductRow({ product: p, onInfo }: { product: Product; onInfo: () => vo
       </Table.Td>
       <Table.Td><Text size="sm">{DOSAGE_FORMS[p.dosage_form]}</Text><Text size="xs" c="dimmed">{p.pack_size}</Text></Table.Td>
       <Table.Td><Text size="sm">{p.supplier_name}</Text></Table.Td>
-      <Table.Td ta="right"><Text fw={600} size="sm">{money(p.unit_price, p.currency)}</Text></Table.Td>
+      <Table.Td ta="right"><Money amount={p.unit_price} currency={p.currency} /></Table.Td>
       <Table.Td><StockBadge qty={p.stock_available} /></Table.Td>
       <Table.Td><ExpiryBadge expiry={p.nearest_expiry} /></Table.Td>
       <Table.Td>
@@ -154,7 +155,7 @@ function ProductDrawer({ id, onClose }: { id: number | null; onClose: () => void
               <Table.Tr><Table.Th>Pack size</Table.Th><Table.Td>{p.pack_size ?? "—"}</Table.Td></Table.Tr>
               <Table.Tr><Table.Th>MCAZ category</Table.Th><Table.Td>{SCHEDULES[p.schedule] ?? p.schedule}</Table.Td></Table.Tr>
               <Table.Tr><Table.Th>MCAZ reg. no.</Table.Th><Table.Td>{p.mcaz_registration_number ?? <Text span c="orange" size="sm">Not provided by supplier</Text>}</Table.Td></Table.Tr>
-              <Table.Tr><Table.Th>Unit price</Table.Th><Table.Td>{money(p.unit_price, p.currency)}</Table.Td></Table.Tr>
+              <Table.Tr><Table.Th>Unit price</Table.Th><Table.Td><Money amount={p.unit_price} currency={p.currency} fw={500} /></Table.Td></Table.Tr>
             </Table.Tbody>
           </Table>
           {p.description && <Text size="sm">{p.description}</Text>}

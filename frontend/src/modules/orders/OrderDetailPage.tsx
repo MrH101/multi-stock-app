@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { openStartConversation } from "@/modules/messaging/StartConversation";
 import { useAccount } from "@/shared/auth/session";
+import { Money } from "@/shared/currency";
 import { date, dateTime, money } from "@/shared/format";
 import { ErrorNotice, ExpiryBadge, Loading, ORDER_STATUS, StatusBadge } from "@/shared/ui";
 import { ordersApi, PAYMENT_METHODS, type OrderStatus } from "./api";
@@ -95,7 +96,8 @@ export default function OrderDetailPage() {
                       <Table.Td ta="right" fw={600}>{money(l.line_total, o.currency)}</Table.Td>
                     </Table.Tr>
                   ))}
-                  <Table.Tr><Table.Td colSpan={4} ta="right" fw={600}>Total</Table.Td><Table.Td ta="right"><Text fw={700} size="lg">{money(o.subtotal, o.currency)}</Text></Table.Td></Table.Tr>
+                  <Table.Tr><Table.Td colSpan={4} ta="right" fw={600}>Total</Table.Td><Table.Td ta="right"><Money amount={o.subtotal} currency={o.currency} rates={o.fx_rates} size="lg" fw={700} /></Table.Td></Table.Tr>
+                  {o.fx_rates?.ZWG && <Table.Tr><Table.Td colSpan={5} ta="right"><Text size="xs" c="dimmed">Rate at checkout: 1 USD = {Number(o.fx_rates.ZWG).toLocaleString("en-ZW", { maximumFractionDigits: 4 })} ZiG</Text></Table.Td></Table.Tr>}
                 </Table.Tbody>
               </Table>
             </Table.ScrollContainer>
