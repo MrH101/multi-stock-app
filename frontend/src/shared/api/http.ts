@@ -17,6 +17,8 @@ type Query = Record<string, string | number | boolean | undefined | null | (stri
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  /** Multipart upload; sent as-is (the browser sets the boundary). */
+  form?: FormData;
   query?: Query;
   auth?: boolean;
 }
@@ -81,13 +83,13 @@ async function refreshSession(): Promise<boolean> {
 export async function api<T>(service: Service, path: string, opts: RequestOptions = {}): Promise<T> {
   const send = () => {
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (opts.body !== undefined) headers["Content-Type"] = "application/json";
+    if (opts.body !== undefined && !opts.form) headers["Content-Type"] = "application/json";
     const token = useSession.getState().accessToken;
     if (opts.auth !== false && token) headers.Authorization = `Bearer ${token}`;
     return fetch(buildUrl(service, path, opts.query), {
       method: opts.method ?? "GET",
       headers,
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
     });
   };
 
@@ -102,6 +104,17 @@ export async function api<T>(service: Service, path: string, opts: RequestOption
   if (!res.ok) throw await toError(res);
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Downloads a protected file (e.g. a CSV template) with the user's session. */
+export async function download(service: Service, path: string, filename: string) {
+  const token = useSession.getState().accessToken;
+  const res = await fetch(buildUrl(service, path), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw await toError(res);
+  const url = URL.createObjectURL(await res.blob());
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export interface Page<T> {

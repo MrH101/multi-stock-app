@@ -6,6 +6,8 @@ dependencies = [
   "multistock-common",
   "uvicorn[standard]>=0.32",
   "psycopg[binary]>=3.2",
+  "python-multipart>=0.0.12",
+  "openpyxl>=3.1",
 ]
 
 [dependency-groups]

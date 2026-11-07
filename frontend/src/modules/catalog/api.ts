@@ -1,4 +1,4 @@
-import { api, type Page } from "@/shared/api/http";
+import { api, download, type Page } from "@/shared/api/http";
 
 export interface Product {
   id: number;
@@ -52,6 +52,14 @@ export interface InventoryAlerts {
   low_stock: { product_id: number; product_name: string; stock_available: number; reorder_level: number }[];
 }
 
+export interface ImportReport {
+  committed: boolean;
+  summary: { total: number; create: number; update: number; unchanged: number; error: number; batches_added: number };
+  columns: Record<string, string>;
+  ignored_columns: string[];
+  rows: { row: number; sku: string | null; name: string | null; action: "create" | "update" | "unchanged" | "error"; messages: string[]; batch: "added" | "exists" | null }[];
+}
+
 export type ProductInput = Omit<Product, "id" | "supplier_org_id" | "supplier_name" | "is_active" | "created_at" | "stock_available" | "nearest_expiry">;
 
 export const catalogApi = {
@@ -59,6 +67,12 @@ export const catalogApi = {
     api<Page<Product>>("catalog", "/products", { query }),
   product: (id: number) => api<ProductDetail>("catalog", `/products/${id}`),
   myProducts: (query: { q?: string; page?: number }) => api<Page<Product>>("catalog", "/supplier/products", { query: { ...query, page_size: 100 } }),
+  importPriceList: (file: File, commit: boolean) => {
+    const form = new FormData();
+    form.append("file", file);
+    return api<ImportReport>("catalog", "/supplier/imports", { method: "POST", form, query: { commit } });
+  },
+  importTemplate: () => download("catalog", "/supplier/imports/template.csv", "multistock-price-list-template.csv"),
   createProduct: (body: ProductInput) => api<Product>("catalog", "/products", { method: "POST", body }),
   updateProduct: (id: number, body: Partial<ProductInput> & { is_active?: boolean }) =>
     api<Product>("catalog", `/products/${id}`, { method: "PATCH", body }),
