@@ -67,6 +67,9 @@ class OrderSummaryOut(BaseModel):
     subtotal: Decimal
     amount_usd: Decimal | None = None
     fx_rates: dict[str, str] | None = None
+    payment_status: str | None = "UNPAID"
+    paid_at: datetime | None = None
+    paid_via: str | None = None
     item_count: int = 0
     created_by_name: str
     created_at: datetime
@@ -164,3 +167,25 @@ class RateHistoryOut(BaseModel):
     source: str | None
     set_by: str | None
     created_at: datetime
+
+
+class PaymentUpdate(BaseModel):
+    payment_status: Literal["UNPAID", "PENDING", "AWAITING_CONFIRMATION", "PAID", "REFUNDED"]
+    paid_via: str | None = Field(None, max_length=30)
+    paid_at: datetime | None = None
+
+
+class InternalOrder(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    order_number: str
+    status: OrderStatus
+    pharmacy_org_id: int
+    pharmacy_name: str
+    supplier_org_id: int
+    supplier_name: str
+    subtotal: Decimal
+    currency: str
+    payment_method: PaymentMethod
+    payment_status: str | None
+    created_by_user_id: int

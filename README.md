@@ -46,7 +46,7 @@ docker compose up --build
 ```bash
 ./scripts/dev.sh         # http://localhost:5173
 ```
-Service API docs: `http://localhost:800{1..5}/docs` (identity, catalog, orders, notifications, agent). `scripts/dev.sh` loads secrets such as `CAIMEX_API_KEY` from the git-ignored `.env` at the repo root.
+Service API docs: `http://localhost:800{1..6}/docs` (identity, catalog, orders, notifications, agent, payments). `scripts/dev.sh` loads secrets such as `CAIMEX_API_KEY` from the git-ignored `.env` at the repo root.
 
 **Tests:** `cd services/<name> && uv run pytest`
 
@@ -58,6 +58,7 @@ services/catalog/       :8002
 services/orders/        :8003
 services/notifications/ :8004
 services/agent/         :8005  monitoring agent: rules, alerts, AI briefings, assistant, /metrics
+services/payments/      :8006  Paynow (EcoCash, OneMoney, InnBucks, cards) and proof-of-payment
 frontend/               React + TypeScript + Vite + Mantine + TanStack Query
 gateway/nginx.conf      API gateway
 infra/                  Postgres init (one database per service)

@@ -28,7 +28,8 @@ events = EventPublisher(settings.redis_url, settings.event_stream, "orders",
 async def lifespan(_app):
     db.create_all()
     db.ensure_columns("order_lines", {"schedule": "VARCHAR(20)", "mcaz_registration_number": "VARCHAR(60)"})
-    db.ensure_columns("orders", {"fx_rates": "JSON", "amount_usd": "NUMERIC(14, 2)"})
+    db.ensure_columns("orders", {"fx_rates": "JSON", "amount_usd": "NUMERIC(14, 2)", "payment_status": "VARCHAR(30)",
+                                 "paid_at": "TIMESTAMP", "paid_via": "VARCHAR(30)"})
     yield
 
 
@@ -314,6 +315,34 @@ def set_rates(body: schemas.RatesIn, s: DB, p: Principal = require_org(OrgType.P
 @app.get("/admin/fx/history", response_model=list[schemas.RateHistoryOut], tags=["exchange rates"])
 def rate_history(s: DB, _p: Principal = require_org(OrgType.PLATFORM), limit: int = Query(60, ge=1, le=500)):
     return s.scalars(select(fx.ExchangeRate).order_by(fx.ExchangeRate.id.desc()).limit(limit)).all()
+
+
+# ---------------------------------------------------------------- internal (payments service)
+def _by_number(s: Session, order_number: str) -> Order:
+    order = s.scalar(select(Order).where(Order.order_number == order_number))
+    if not order:
+        raise HTTPException(404, "Order not found")
+    return order
+
+
+@app.get("/internal/orders/{order_number}", response_model=schemas.InternalOrder, tags=["internal"],
+         dependencies=[Depends(require_service)])
+def internal_order(order_number: str, s: DB):
+    return _by_number(s, order_number)
+
+
+@app.post("/internal/orders/{order_number}/payment", response_model=schemas.InternalOrder, tags=["internal"],
+          dependencies=[Depends(require_service)])
+def record_payment(order_number: str, body: schemas.PaymentUpdate, s: DB):
+    """Called by the payments service when a payment's state changes. Idempotent."""
+    order = _by_number(s, order_number)
+    order.payment_status = body.payment_status
+    if body.paid_via:
+        order.paid_via = body.paid_via
+    if body.payment_status == "PAID":
+        order.paid_at = order.paid_at or body.paid_at or _now()
+    s.commit()
+    return order
 
 
 # ---------------------------------------------------------------- internal (monitoring agent)

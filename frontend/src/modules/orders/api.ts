@@ -22,6 +22,9 @@ export interface OrderSummary {
   subtotal: string;
   amount_usd: string | null;
   fx_rates: Record<string, string> | null;
+  payment_status: "UNPAID" | "PENDING" | "AWAITING_CONFIRMATION" | "PAID" | "REFUNDED" | null;
+  paid_at: string | null;
+  paid_via: string | null;
   item_count: number;
   created_by_name: string;
   created_at: string;

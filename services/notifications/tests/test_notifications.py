@@ -72,3 +72,14 @@ def test_agent_alerts_become_notifications(client):
     [n] = client.get("/notifications", headers=SUPPLIER).json()
     assert n["title"] == "Urgent: Amoxil is out of stock" and n["link"] == "/inventory/1" and n["kind"] == "insight"
     assert client.get("/notifications", headers=PHARMACY).json() == []
+
+
+def test_payment_events_notify_both_sides(client):
+    pay = {"order_id": 7, "order_number": "PO-1", "pharmacy_org_id": 20, "supplier_org_id": 10, "amount": "536.00",
+           "currency": "ZWG", "method": "ecocash", "note": None}
+    with db.SessionLocal() as s:
+        handle_event(s, {"type": "payment.paid", "payload": pay})
+        handle_event(s, {"type": "payment.pending", "payload": pay})  # no notification for in-progress
+    [sup] = client.get("/notifications", headers=SUPPLIER).json()
+    assert sup["title"] == "Payment received for PO-1" and sup["body"] == "ZiG 536.00 via EcoCash."
+    assert client.get("/notifications", headers=PHARMACY).json()[0]["title"] == "Payment confirmed for PO-1"

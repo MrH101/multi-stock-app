@@ -82,6 +82,18 @@ services:
       CAIMEX_API_KEY: ${CAIMEX_API_KEY:-}
       CAIMEX_MODEL: ${CAIMEX_MODEL:-gpt-5.4-mini-2026-03-17}
 
+  payments:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: payments } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/payments
+      ORDERS_URL: http://orders:8000
+      PAYMENTS_SECRET_KEY: ${PAYMENTS_SECRET_KEY:-dev-only-insecure-key}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      UPLOAD_DIR: /data/uploads
+    volumes: [paymentsdata:/data]
+
   frontend:
     build: ./frontend
     restart: unless-stopped
@@ -90,8 +102,9 @@ services:
     image: nginx:1.27-alpine
     volumes: [./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro]
     ports: ["8080:80"]
-    depends_on: [identity, catalog, orders, notifications, agent, frontend]
+    depends_on: [identity, catalog, orders, notifications, agent, payments, frontend]
 
 volumes:
+  paymentsdata:
   pgdata:
   redisdata:

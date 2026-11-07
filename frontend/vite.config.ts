@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // In development Vite plays the API gateway's role, using the same /api/<service> paths.
-const services: Record<string, number> = { identity: 8001, catalog: 8002, orders: 8003, notifications: 8004, agent: 8005 };
+const services: Record<string, number> = { identity: 8001, catalog: 8002, orders: 8003, notifications: 8004, agent: 8005, payments: 8006 };
 const proxy = Object.fromEntries(
   Object.entries(services).map(([name, port]) => [
     `/api/${name}`,

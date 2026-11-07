@@ -3,11 +3,12 @@ import { useForm } from "@mantine/form";
 import { notifications } from "@mantine/notifications";
 import { useMutation } from "@tanstack/react-query";
 import { useAccount, useSession } from "@/shared/auth/session";
+import { PaymentSettings } from "@/modules/payments/PaymentSettings";
 import { ErrorNotice, PageHeader } from "@/shared/ui";
 import { identityApi } from "./api";
 
 export default function SettingsPage() {
-  const { organization, user, canManage } = useAccount();
+  const { organization, user, canManage, isSupplier } = useAccount();
   const setOrganization = useSession((s) => s.setOrganization);
   const org = useForm({
     initialValues: { name: organization?.name ?? "", email: organization?.email ?? "", phone: organization?.phone ?? "", address: organization?.address ?? "", city: organization?.city ?? "" },
@@ -74,6 +75,7 @@ export default function SettingsPage() {
             </form>
           </Card>
         </Grid.Col>
+        {isSupplier && canManage && <Grid.Col span={12}><PaymentSettings /></Grid.Col>}
       </Grid>
     </>
   );

@@ -12,7 +12,8 @@ export MONITOR_INTERVAL_SECONDS="${MONITOR_INTERVAL_SECONDS:-120}"
 pids=()
 trap 'kill "${pids[@]}" 2>/dev/null' EXIT INT TERM
 port=8001
-for svc in identity catalog orders notifications agent; do
+export ORDERS_URL="http://localhost:8003" PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://localhost:5173}"
+for svc in identity catalog orders notifications agent payments; do
   (cd "$ROOT/services/$svc" && uv sync -q && uv run uvicorn app.main:app --port "$port" --reload --log-level warning) &
   pids+=($!)
   port=$((port + 1))
