@@ -37,6 +37,8 @@ def test_search_shows_sellable_stock_and_nearest_expiry(client):
     assert item["nearest_expiry"] == in_days(60)
     assert item["supplier_name"] == "Pharma Wholesale"
     assert client.get("/products", headers=PHARMACY, params={"in_stock": True}).json()["total"] == 1
+    assert client.get("/products", headers=PHARMACY, params={"q": "amoxicillin 500mg"}).json()["total"] == 1
+    assert client.get("/products", headers=PHARMACY, params={"q": "amoxicillin 250mg"}).json()["total"] == 0
 
 
 def test_fefo_reservation_release_and_commit(client):
@@ -91,3 +93,23 @@ def test_adjustments_are_audited_and_alerts(client):
     alerts = client.get("/inventory/alerts", headers=SUPPLIER).json()
     assert alerts["expiring"][0]["days_to_expiry"] == 30
     assert alerts["low_stock"][0]["stock_available"] == 35
+
+
+def test_monitoring_snapshot_reports_stock_demand_and_expiry(client):
+    pid = make_product(client)
+    client.post(f"/products/{pid}/batches", headers=SUPPLIER, json={"batch_number": "SOON", "expiry_date": in_days(20), "quantity": 10})
+    client.post(f"/products/{pid}/batches", headers=SUPPLIER, json={"batch_number": "LATE", "expiry_date": in_days(400), "quantity": 30})
+    client.post("/internal/reservations", headers=SERVICE, json={"order_ref": "PO-1", "lines": [{"product_id": pid, "quantity": 15}]})
+    client.post("/internal/reservations", headers=SERVICE, json={"order_ref": "PO-2", "lines": [{"product_id": pid, "quantity": 5}]})
+    client.post("/internal/reservations/PO-2/release", headers=SERVICE)
+
+    assert client.get("/internal/monitoring/inventory").status_code == 403
+    snap = client.get("/internal/monitoring/inventory", headers=SERVICE, params={"expiry_days": 90}).json()
+    [p] = snap["products"]
+    assert p["stock_available"] == 25 and p["demand_units"] == 15 and p["reorder_level"] == 50
+    assert snap["batches"] == []  # SOON was used up first (FEFO); LATE is outside the window
+
+    other = make_product(client, name="Panado", generic_name="Paracetamol", sku="PAN")
+    client.post(f"/products/{other}/batches", headers=SUPPLIER, json={"batch_number": "P1", "expiry_date": in_days(20), "quantity": 8})
+    [b] = client.get("/internal/monitoring/inventory", headers=SERVICE).json()["batches"]
+    assert b["batch_number"] == "P1" and b["quantity_available"] == 8 and b["supplier_org_id"] == 10

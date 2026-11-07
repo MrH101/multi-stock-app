@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { catalogApi } from "@/modules/catalog/api";
 import { ordersApi } from "@/modules/orders/api";
+import { InsightsWidget } from "@/modules/insights/InsightsWidget";
 import { useAccount } from "@/shared/auth/session";
 import { money } from "@/shared/format";
 import { ExpiryBadge } from "@/shared/ui";
@@ -30,6 +31,7 @@ export default function SupplierDashboard() {
         <StatCard label="Sales this month" value={s ? money(s.month_total, s.currency) : "—"} icon={IconCash} />
         <StatCard label="Stock alerts" value={alertCount} icon={IconAlertTriangle} color={alertCount ? "orange" : "gray"} hint="Expiring within 6 months or low" />
       </SimpleGrid>
+      <InsightsWidget />
       <Grid gutter="lg">
         <Grid.Col span={{ base: 12, lg: 7 }}><RecentOrders title="Orders needing action" status={["SUBMITTED", "ACCEPTED"]} counterpart="pharmacy" /></Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}>

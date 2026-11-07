@@ -28,6 +28,7 @@ export function useRealtime() {
         qc.invalidateQueries({ queryKey: ["unread"] });
         if (msg.kind === "notification") {
           qc.invalidateQueries({ queryKey: ["notifications"] });
+          qc.invalidateQueries({ queryKey: ["insights"] });
           if (msg.link?.startsWith("/orders")) {
             qc.invalidateQueries({ queryKey: ["orders"] });
             qc.invalidateQueries({ queryKey: ["summary"] });

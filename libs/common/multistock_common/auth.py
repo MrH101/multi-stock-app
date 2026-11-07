@@ -3,6 +3,7 @@
 Only the identity service *issues* tokens; every other service just verifies them
 locally with the shared secret, so no network hop is needed per request.
 """
+import hmac
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from enum import StrEnum
@@ -107,5 +108,6 @@ def require_role(*roles: Role):
 
 
 def require_service(request: Request, x_service_token: Annotated[str | None, Header()] = None) -> None:
-    if x_service_token != request.app.state.settings.service_token:
+    expected = request.app.state.settings.service_token
+    if not x_service_token or not hmac.compare_digest(x_service_token.encode(), expected.encode()):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Internal endpoint")

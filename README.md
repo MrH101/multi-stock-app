@@ -8,7 +8,7 @@ A B2B platform where **pharmacies** order medicines from licensed **suppliers/wh
 
 ```
                     ┌──────────── React SPA (frontend/) ───────────┐
-                    │ modules: identity · catalog · orders · messaging · dashboard │
+                    │ modules: identity · catalog · orders · messaging · insights · dashboard │
                     └──────────────────────┬───────────────────────┘
                                            │  /api/<service>/...
                                  ┌─────────▼─────────┐
@@ -29,6 +29,7 @@ A B2B platform where **pharmacies** order medicines from licensed **suppliers/wh
 * **Auth**: identity issues short-lived JWT access tokens (+ refresh tokens); every other service verifies them locally.
 * **Sync calls** only where consistency is needed: orders → catalog `/internal/reservations` (service token, idempotent, retried).
 * **Async events** (`order.created`, `order.status_changed`, …) on Redis Streams with consumer groups; notifications turns them into alerts and pushes over WebSocket.
+* **Monitoring agent** (`services/agent`, :8005) checks every organisation's stock, expiry dates, orders and budgets on a schedule. It raises de-duplicated alerts, notifies the right organisation, writes a daily-style briefing and answers questions. AI text comes from [Caimex](https://api.caimex.ai) (OpenAI-compatible); the rules work without it.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the domain rules and the production checklist.
 
@@ -36,7 +37,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the domain rules and the pr
 
 **Docker (production-like):**
 ```bash
-cp .env.example .env     # change the secrets
+cp .env.example .env     # change the secrets; set CAIMEX_API_KEY to turn on AI briefings + assistant
 docker compose up --build
 # http://localhost:8080   admin: admin@multistock.app / value of ADMIN_PASSWORD
 ```
@@ -45,7 +46,7 @@ docker compose up --build
 ```bash
 ./scripts/dev.sh         # http://localhost:5173
 ```
-Service API docs: `http://localhost:800{1..4}/docs` (identity, catalog, orders, notifications).
+Service API docs: `http://localhost:800{1..5}/docs` (identity, catalog, orders, notifications, agent). `scripts/dev.sh` loads secrets such as `CAIMEX_API_KEY` from the git-ignored `.env` at the repo root.
 
 **Tests:** `cd services/<name> && uv run pytest`
 
@@ -56,6 +57,7 @@ services/identity/      :8001
 services/catalog/       :8002
 services/orders/        :8003
 services/notifications/ :8004
+services/agent/         :8005  monitoring agent: rules, alerts, AI briefings, assistant, /metrics
 frontend/               React + TypeScript + Vite + Mantine + TanStack Query
 gateway/nginx.conf      API gateway
 infra/                  Postgres init (one database per service)

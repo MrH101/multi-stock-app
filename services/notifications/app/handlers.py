@@ -41,5 +41,9 @@ def handle_event(s: Session, event: dict) -> None:
         else:
             notify(s, p["supplier_org_id"], "order", f"Order {p['order_number']} {text}",
                    f"{p['pharmacy_name']} updated the order.{note}", f"/orders/{p['order_id']}")
+    elif kind == "agent.alert":
+        # Raised by the monitoring agent (stock, expiry, budget, order SLA, platform health).
+        prefix = {"critical": "Urgent: ", "warning": ""}.get(p.get("severity", ""), "")
+        notify(s, p["org_id"], "insight", f"{prefix}{p['title']}"[:200], p["body"][:1000], p.get("link"))
     else:
         log.debug("ignoring event %s", kind)

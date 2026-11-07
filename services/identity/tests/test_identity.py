@@ -57,3 +57,11 @@ def test_admin_can_verify_suppliers(client):
     assert r.json()["verified"] is True
     suppliers = client.get("/organizations?type=SUPPLIER", headers=auth(admin)).json()
     assert [o["name"] for o in suppliers] == ["Pharma Wholesale"]
+
+
+def test_internal_organisation_directory(client):
+    client.post("/auth/register", json=PHARMACY)
+    assert client.get("/internal/organizations").status_code == 403
+    orgs = client.get("/internal/organizations", headers={"X-Service-Token": "dev-service-token"}).json()
+    assert {o["type"] for o in orgs} == {"PLATFORM", "PHARMACY"}
+    assert all({"id", "name", "is_active"} <= set(o) for o in orgs)
