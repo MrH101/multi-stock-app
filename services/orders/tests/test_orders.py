@@ -17,6 +17,7 @@ def test_checkout_splits_one_order_per_supplier(client, catalog):
     assert [o["supplier_name"] for o in orders] == ["Pharma Wholesale", "Other Wholesale"]
     assert orders[0]["subtotal"] == "35.00"
     assert orders[0]["lines"][0]["allocations"][0]["batch_number"] == "B1"
+    assert orders[0]["lines"][0]["schedule"] == "PP" and orders[0]["lines"][0]["mcaz_registration_number"] == "MCAZ-1"
     assert orders[0]["allowed_transitions"] == ["CANCELLED"]
     assert [e["type"] for e in events.published[-2:]] == ["order.created", "order.created"]
 

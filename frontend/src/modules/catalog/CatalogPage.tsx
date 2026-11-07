@@ -6,7 +6,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useCart } from "@/modules/orders/cart";
-import { DOSAGE_FORMS, SCHEDULES, date, money, options } from "@/shared/format";
+import { DOSAGE_FORMS, SCHEDULES, SCHEDULE_BADGE, date, money, options } from "@/shared/format";
 import { EmptyState, ErrorNotice, ExpiryBadge, Loading, PageHeader, StockBadge } from "@/shared/ui";
 import { catalogApi, type Product } from "./api";
 
@@ -115,7 +115,7 @@ function ProductRow({ product: p, onInfo }: { product: Product; onInfo: () => vo
           </div>
           <ActionIcon variant="subtle" size="sm" onClick={onInfo} aria-label="Product details"><IconInfoCircle size={16} /></ActionIcon>
         </Group>
-        {(p.schedule === "CONTROLLED" || p.schedule === "PRESCRIPTION") && <Badge size="xs" color={p.schedule === "CONTROLLED" ? "red" : "grape"} variant="light" mt={4}>{SCHEDULES[p.schedule]}</Badge>}
+        {SCHEDULE_BADGE[p.schedule] && <Badge size="xs" color={SCHEDULE_BADGE[p.schedule].color} variant="light" mt={4}>{SCHEDULE_BADGE[p.schedule].label}</Badge>}
       </Table.Td>
       <Table.Td><Text size="sm">{DOSAGE_FORMS[p.dosage_form]}</Text><Text size="xs" c="dimmed">{p.pack_size}</Text></Table.Td>
       <Table.Td><Text size="sm">{p.supplier_name}</Text></Table.Td>
@@ -152,7 +152,8 @@ function ProductDrawer({ id, onClose }: { id: number | null; onClose: () => void
               <Table.Tr><Table.Th>Manufacturer</Table.Th><Table.Td>{p.manufacturer ?? "—"}</Table.Td></Table.Tr>
               <Table.Tr><Table.Th>Dosage form</Table.Th><Table.Td>{DOSAGE_FORMS[p.dosage_form]}</Table.Td></Table.Tr>
               <Table.Tr><Table.Th>Pack size</Table.Th><Table.Td>{p.pack_size ?? "—"}</Table.Td></Table.Tr>
-              <Table.Tr><Table.Th>Schedule</Table.Th><Table.Td>{SCHEDULES[p.schedule]}</Table.Td></Table.Tr>
+              <Table.Tr><Table.Th>MCAZ category</Table.Th><Table.Td>{SCHEDULES[p.schedule] ?? p.schedule}</Table.Td></Table.Tr>
+              <Table.Tr><Table.Th>MCAZ reg. no.</Table.Th><Table.Td>{p.mcaz_registration_number ?? <Text span c="orange" size="sm">Not provided by supplier</Text>}</Table.Td></Table.Tr>
               <Table.Tr><Table.Th>Unit price</Table.Th><Table.Td>{money(p.unit_price, p.currency)}</Table.Td></Table.Tr>
             </Table.Tbody>
           </Table>

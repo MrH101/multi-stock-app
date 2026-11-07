@@ -26,12 +26,17 @@ class DosageForm(StrEnum):
 
 
 class Schedule(StrEnum):
-    """Regulatory class of the medicine."""
-    OTC = "OTC"  # household / general sale
-    P = "P"  # pharmacy only
-    PP = "PP"  # pharmacist-initiated
-    PRESCRIPTION = "PRESCRIPTION"
-    CONTROLLED = "CONTROLLED"  # narcotics / psychotropics
+    """MCAZ legal supply category (Medicines Control Authority of Zimbabwe)."""
+    PP = "PP"  # Prescription Preparation: dispensed only on a prescription
+    PIM = "PIM"  # Pharmacist-Initiated Medicine: supplied on a pharmacist's recommendation
+    P = "P"  # Pharmacy Medicine: sold only in a pharmacy
+    HR = "HR"  # Household Remedy: general sale / self-medication
+    CD = "CD"  # Controlled / dangerous drug (narcotics, psychotropics)
+    NON_MEDICINE = "NON_MEDICINE"  # surgical, devices, sundries
+
+
+# Values used before the MCAZ categories were adopted (issue #3).
+LEGACY_SCHEDULE = {"OTC": Schedule.HR, "PRESCRIPTION": Schedule.PP, "CONTROLLED": Schedule.CD}
 
 
 class Product(TimestampMixin, Base):
@@ -47,7 +52,8 @@ class Product(TimestampMixin, Base):
     dosage_form: Mapped[DosageForm] = mapped_column(Enum(DosageForm, native_enum=False), default=DosageForm.OTHER)
     pack_size: Mapped[str | None] = mapped_column(String(100))  # e.g. "10x10"
     manufacturer: Mapped[str | None] = mapped_column(String(200))
-    schedule: Mapped[Schedule] = mapped_column(Enum(Schedule, native_enum=False), default=Schedule.P)
+    schedule: Mapped[Schedule] = mapped_column(Enum(Schedule, native_enum=False, length=20), default=Schedule.P)
+    mcaz_registration_number: Mapped[str | None] = mapped_column(String(60), index=True)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     currency: Mapped[str] = mapped_column(String(3), default="USD")
     description: Mapped[str | None] = mapped_column(Text)

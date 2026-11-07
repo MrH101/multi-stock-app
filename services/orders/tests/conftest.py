@@ -57,6 +57,7 @@ class FakeCatalog:
             out.append({"product_id": p["id"], "product_name": p["name"], "generic_name": None, "strength": None,
                         "pack_size": None, "supplier_org_id": p["supplier_org_id"], "supplier_name": p["supplier_name"],
                         "unit_price": p["unit_price"], "currency": "USD", "quantity": l["quantity"],
+                        "schedule": "PP", "mcaz_registration_number": f"MCAZ-{p['id']}",
                         "allocations": [{"batch_number": "B1", "expiry_date": "2030-01-01", "quantity": l["quantity"]}]})
         return out
 

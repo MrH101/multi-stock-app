@@ -29,12 +29,21 @@ export const DOSAGE_FORMS: Record<string, string> = {
   OTHER: "Other",
 };
 
+/** MCAZ legal supply categories. */
 export const SCHEDULES: Record<string, string> = {
-  OTC: "OTC (general sale)",
-  P: "Pharmacy only",
-  PP: "Pharmacist-initiated",
-  PRESCRIPTION: "Prescription only",
-  CONTROLLED: "Controlled drug",
+  PP: "PP · Prescription Preparation",
+  PIM: "PIM · Pharmacist-Initiated Medicine",
+  P: "P · Pharmacy Medicine",
+  HR: "HR · Household Remedy",
+  CD: "CD · Controlled / dangerous drug",
+  NON_MEDICINE: "Non-medicine (surgical, sundries)",
+};
+
+/** Short badge for categories pharmacists must notice before ordering or dispensing. */
+export const SCHEDULE_BADGE: Record<string, { label: string; color: string }> = {
+  PP: { label: "Prescription (PP)", color: "grape" },
+  PIM: { label: "Pharmacist-initiated", color: "indigo" },
+  CD: { label: "Controlled drug", color: "red" },
 };
 
 export const options = (m: Record<string, string>) => Object.entries(m).map(([value, label]) => ({ value, label }));

@@ -12,6 +12,7 @@ export interface Product {
   pack_size: string | null;
   manufacturer: string | null;
   schedule: string;
+  mcaz_registration_number: string | null;
   unit_price: string;
   currency: string;
   description: string | null;

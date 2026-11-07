@@ -38,6 +38,8 @@ class OrderLineOut(BaseModel):
     quantity: int
     unit_price: Decimal
     line_total: Decimal
+    schedule: str | None = None
+    mcaz_registration_number: str | None = None
     allocations: list[AllocationOut]
 
 

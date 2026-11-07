@@ -113,3 +113,37 @@ def test_monitoring_snapshot_reports_stock_demand_and_expiry(client):
     client.post(f"/products/{other}/batches", headers=SUPPLIER, json={"batch_number": "P1", "expiry_date": in_days(20), "quantity": 8})
     [b] = client.get("/internal/monitoring/inventory", headers=SERVICE).json()["batches"]
     assert b["batch_number"] == "P1" and b["quantity_available"] == 8 and b["supplier_org_id"] == 10
+
+
+def test_mcaz_category_and_registration_number(client):
+    # old category names are still accepted and mapped to the MCAZ ones
+    pid = make_product(client, schedule="PRESCRIPTION", mcaz_registration_number="  2009/7.3/4567 ")
+    p = client.get(f"/products/{pid}", headers=PHARMACY).json()
+    assert p["schedule"] == "PP" and p["mcaz_registration_number"] == "2009/7.3/4567"
+    make_product(client, name="Panado", generic_name="Paracetamol", sku="PAN", schedule="HR")
+    assert client.post("/products", headers=SUPPLIER, json={**AMOX, "sku": "X", "schedule": "BOGUS"}).status_code == 422
+
+    assert client.get("/products", headers=PHARMACY, params={"q": "2009/7.3"}).json()["total"] == 1
+    only_pp = client.get("/products", headers=PHARMACY, params={"schedule": ["PP", "CD"]}).json()
+    assert [x["name"] for x in only_pp["items"]] == ["Amoxil"]
+
+    client.post(f"/products/{pid}/batches", headers=SUPPLIER, json={"batch_number": "B1", "expiry_date": in_days(300), "quantity": 5})
+    r = client.post("/internal/reservations", headers=SERVICE, json={"order_ref": "PO-9", "lines": [{"product_id": pid, "quantity": 2}]})
+    line = r.json()["lines"][0]
+    assert line["schedule"] == "PP" and line["mcaz_registration_number"] == "2009/7.3/4567"
+
+
+def test_existing_databases_are_upgraded(client):
+    from sqlalchemy import text
+    from app.main import db, upgrade_schema
+
+    pid = make_product(client)
+    with db.engine.begin() as c:  # a row written before the MCAZ categories existed
+        c.execute(text("UPDATE products SET schedule = 'CONTROLLED' WHERE id = :id"), {"id": pid})
+        c.execute(text("CREATE TABLE legacy_t (id INTEGER PRIMARY KEY)"))
+    upgrade_schema()
+    assert client.get(f"/products/{pid}", headers=PHARMACY).json()["schedule"] == "CD"
+    assert db.ensure_columns("legacy_t", {"note": "VARCHAR(10)"}) == ["note"]
+    assert db.ensure_columns("legacy_t", {"note": "VARCHAR(10)"}) == []  # idempotent
+    with db.engine.begin() as c:
+        c.execute(text("DROP TABLE legacy_t"))

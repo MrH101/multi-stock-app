@@ -42,6 +42,8 @@ export interface Order extends OrderSummary {
     quantity: number;
     unit_price: string;
     line_total: string;
+    schedule: string | null;
+    mcaz_registration_number: string | null;
     allocations: { batch_number: string; expiry_date: string; quantity: number }[];
   }[];
   history: { status: OrderStatus; note: string | null; actor_name: string; actor_org_name: string; at: string }[];

@@ -1,9 +1,20 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .models import DosageForm, MovementReason, Schedule
+from .models import LEGACY_SCHEDULE, DosageForm, MovementReason, Schedule
+
+
+def _schedule(v):
+    return LEGACY_SCHEDULE.get(v, v) if isinstance(v, str) else v
+
+
+def _reg_no(v):
+    if isinstance(v, str):
+        v = " ".join(v.split()).upper()
+        return v or None
+    return v
 
 
 class ProductBase(BaseModel):
@@ -15,10 +26,14 @@ class ProductBase(BaseModel):
     pack_size: str | None = Field(None, max_length=100)
     manufacturer: str | None = Field(None, max_length=200)
     schedule: Schedule = Schedule.P
+    mcaz_registration_number: str | None = Field(None, max_length=60, description="MCAZ product registration number")
     unit_price: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     currency: str = Field("USD", min_length=3, max_length=3)
     description: str | None = None
     reorder_level: int = Field(0, ge=0)
+
+    _norm_schedule = field_validator("schedule", mode="before")(_schedule)
+    _norm_reg = field_validator("mcaz_registration_number", mode="before")(_reg_no)
 
 
 class ProductCreate(ProductBase):
@@ -34,11 +49,15 @@ class ProductUpdate(BaseModel):
     pack_size: str | None = None
     manufacturer: str | None = None
     schedule: Schedule | None = None
+    mcaz_registration_number: str | None = Field(None, max_length=60)
     unit_price: Decimal | None = Field(None, gt=0)
     currency: str | None = Field(None, min_length=3, max_length=3)
     description: str | None = None
     reorder_level: int | None = Field(None, ge=0)
     is_active: bool | None = None
+
+    _norm_schedule = field_validator("schedule", mode="before")(_schedule)
+    _norm_reg = field_validator("mcaz_registration_number", mode="before")(_reg_no)
 
 
 class ProductOut(ProductBase):
@@ -154,6 +173,8 @@ class ReservedLine(BaseModel):
     unit_price: Decimal
     currency: str
     quantity: int
+    schedule: Schedule | None = None
+    mcaz_registration_number: str | None = None
     allocations: list[Allocation]
 
 
