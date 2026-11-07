@@ -7,4 +7,6 @@ __pycache__/
 node_modules/
 dist/
 .env
+uploads/
+test_uploads/
 .DS_Store

@@ -1,0 +1,23 @@
+[project]
+name = "payments-service"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "multistock-common",
+  "uvicorn[standard]>=0.32",
+  "psycopg[binary]>=3.2",
+  "python-multipart>=0.0.12",
+  "cryptography>=43",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[tool.uv.sources]
+multistock-common = { path = "../../libs/common", editable = true }
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

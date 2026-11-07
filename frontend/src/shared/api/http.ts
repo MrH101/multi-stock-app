@@ -1,6 +1,6 @@
 import { useSession, type SessionPayload } from "@/shared/auth/session";
 
-export type Service = "identity" | "catalog" | "orders" | "notifications" | "agent";
+export type Service = "identity" | "catalog" | "orders" | "notifications" | "agent" | "payments";
 
 export class ApiError extends Error {
   constructor(

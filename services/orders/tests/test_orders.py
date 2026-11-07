@@ -150,3 +150,18 @@ def test_budget_counts_every_currency_at_the_checkout_rate(client):
     assert s["currency"] == "ZWG" and s["month_total"] == "1420.00"
     usd = client.get("/orders/summary", headers=PHARMACY).json()
     assert usd["month_total"] == "50.00"
+
+
+def test_payments_service_updates_payment_status(client, catalog):
+    from tests.conftest import SERVICE
+    [o] = checkout(client, [{"product_id": 1, "quantity": 2}]).json()
+    assert o["payment_status"] == "UNPAID"
+    assert client.get(f"/internal/orders/{o['order_number']}").status_code == 403
+    info = client.get(f"/internal/orders/{o['order_number']}", headers=SERVICE).json()
+    assert info["subtotal"] == "25.00" and info["pharmacy_org_id"] == 20 and info["supplier_org_id"] == 10
+    r = client.post(f"/internal/orders/{o['order_number']}/payment", headers=SERVICE,
+                    json={"payment_status": "PAID", "paid_via": "ecocash"})
+    assert r.json()["payment_status"] == "PAID"
+    d = client.get(f"/orders/{o['id']}", headers=PHARMACY).json()
+    assert d["payment_status"] == "PAID" and d["paid_via"] == "ecocash" and d["paid_at"]
+    assert client.get("/internal/orders/PO-NOPE", headers=SERVICE).status_code == 404

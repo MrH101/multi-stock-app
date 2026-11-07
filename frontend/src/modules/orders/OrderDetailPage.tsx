@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { openStartConversation } from "@/modules/messaging/StartConversation";
+import { PaymentPanel } from "@/modules/payments/PaymentPanel";
 import { useAccount } from "@/shared/auth/session";
 import { Money } from "@/shared/currency";
 import { date, dateTime, money } from "@/shared/format";
@@ -116,13 +117,14 @@ export default function OrderDetailPage() {
               <Card h="100%">
                 <Text fw={600} mb="xs">To (supplier)</Text>
                 <Text size="sm">{o.supplier_name}</Text>
-                <Text size="sm" mt="xs">Payment: {PAYMENT_METHODS[o.payment_method]}</Text>
+                <Text size="sm" mt="xs">Payment: {PAYMENT_METHODS[o.payment_method]}{o.payment_status === "PAID" ? ` · paid ${o.paid_at ? date(o.paid_at) : ""}` : ""}</Text>
                 {o.notes && <Text size="sm" mt="xs" style={{ whiteSpace: "pre-wrap" }}>Notes: {o.notes}</Text>}
               </Card>
             </Grid.Col>
           </Grid>
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 4 }}>
+          {!isAdmin && <PaymentPanel orderNumber={o.order_number} orderStatus={o.status} />}
           <Card>
             <Text fw={600} mb="md">Progress</Text>
             <Timeline active={o.history.length - 1} bulletSize={18} lineWidth={2}>

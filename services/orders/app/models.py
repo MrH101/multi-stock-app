@@ -17,6 +17,14 @@ class OrderStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class PaymentStatus(StrEnum):
+    UNPAID = "UNPAID"
+    PENDING = "PENDING"  # a mobile-money / card payment is in progress
+    AWAITING_CONFIRMATION = "AWAITING_CONFIRMATION"  # proof of payment uploaded, supplier to confirm
+    PAID = "PAID"
+    REFUNDED = "REFUNDED"
+
+
 class PaymentMethod(StrEnum):
     CASH_ON_DELIVERY = "CASH_ON_DELIVERY"
     BANK_TRANSFER = "BANK_TRANSFER"
@@ -46,6 +54,10 @@ class Order(TimestampMixin, Base):
     subtotal: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     # Rates (per USD) in force at checkout, so budgets and reports convert at the rate actually used.
     fx_rates: Mapped[dict | None] = mapped_column(JSON)
+    # Maintained by the payments service through /internal/orders/{number}/payment.
+    payment_status: Mapped[str | None] = mapped_column(String(30), default=PaymentStatus.UNPAID)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    paid_via: Mapped[str | None] = mapped_column(String(30))
     amount_usd: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
 
     lines: Mapped[list["OrderLine"]] = relationship(back_populates="order", cascade="all, delete-orphan")
