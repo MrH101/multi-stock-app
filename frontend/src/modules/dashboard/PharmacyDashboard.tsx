@@ -6,12 +6,14 @@ import { ordersApi } from "@/modules/orders/api";
 import { BudgetCard } from "@/modules/orders/BudgetCard";
 import { InsightsWidget } from "@/modules/insights/InsightsWidget";
 import { useAccount } from "@/shared/auth/session";
+import { useDisplayCurrency } from "@/shared/currency";
 import { money } from "@/shared/format";
 import { LatestAnnouncements, MonthlyChart, RecentOrders, StatCard } from "./widgets";
 
 export default function PharmacyDashboard() {
   const { user, organization } = useAccount();
-  const summary = useQuery({ queryKey: ["summary"], queryFn: ordersApi.summary });
+  const { currency } = useDisplayCurrency();
+  const summary = useQuery({ queryKey: ["summary", currency], queryFn: () => ordersApi.summary(currency) });
   const s = summary.data;
   const hour = new Date().getHours();
 

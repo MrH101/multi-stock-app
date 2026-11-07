@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { messagingApi } from "@/modules/messaging/api";
 import { ordersApi, type DashboardSummary, type OrderStatus } from "@/modules/orders/api";
+import { Money } from "@/shared/currency";
 import { dateTime, fromNow, money } from "@/shared/format";
 import { EmptyState, StatusBadge } from "@/shared/ui";
 
@@ -50,7 +51,7 @@ export function RecentOrders({ status, title, counterpart }: { status?: OrderSta
               <Table.Tr key={o.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/orders/${o.id}`)}>
                 <Table.Td><Text fw={600} size="sm">{o.order_number}</Text><Text size="xs" c="dimmed">{counterpart === "supplier" ? o.supplier_name : o.pharmacy_name}</Text></Table.Td>
                 <Table.Td><Text size="xs" c="dimmed">{dateTime(o.created_at)}</Text></Table.Td>
-                <Table.Td ta="right"><Text size="sm" fw={600}>{money(o.subtotal, o.currency)}</Text></Table.Td>
+                <Table.Td ta="right"><Money amount={o.subtotal} currency={o.currency} rates={o.fx_rates} /></Table.Td>
                 <Table.Td><StatusBadge status={o.status} size="sm" /></Table.Td>
               </Table.Tr>
             ))}

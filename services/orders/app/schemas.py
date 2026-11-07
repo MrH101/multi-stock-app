@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .models import OrderStatus, PaymentMethod
 
@@ -63,6 +65,8 @@ class OrderSummaryOut(BaseModel):
     status: OrderStatus
     currency: str
     subtotal: Decimal
+    amount_usd: Decimal | None = None
+    fx_rates: dict[str, str] | None = None
     item_count: int = 0
     created_by_name: str
     created_at: datetime
@@ -94,7 +98,12 @@ class StatusChange(BaseModel):
 
 class BudgetIn(BaseModel):
     amount: Decimal = Field(ge=0, max_digits=14, decimal_places=2)
-    currency: str = Field("USD", min_length=3, max_length=3)
+    currency: Literal["USD", "ZWG", "ZAR"] = "USD"
+
+    @field_validator("currency", mode="before")
+    @classmethod
+    def _upper(cls, v):
+        return v.upper() if isinstance(v, str) else v
 
 
 class BudgetOut(BaseModel):
@@ -105,6 +114,8 @@ class BudgetOut(BaseModel):
     remaining: Decimal
     percent_used: float
     is_set: bool
+    # currencies of orders that could not be counted because no exchange rate is set yet
+    unconverted_currencies: list[str] = []
 
 
 class MonthPoint(BaseModel):
@@ -126,3 +137,30 @@ class DashboardSummary(BaseModel):
     currency: str
     monthly: list[MonthPoint]
     top_products: list[TopProduct]
+    unconverted_currencies: list[str] = []
+
+
+class RatesIn(BaseModel):
+    rates: dict[Literal["ZWG", "ZAR"], Annotated[Decimal, Field(gt=0, lt=1_000_000, decimal_places=6)]] = Field(
+        min_length=1, description="Units of the currency per 1 USD")
+    effective_date: date | None = None
+    source: str | None = Field(None, max_length=120, description='e.g. "RBZ interbank 07/11"')
+
+
+class RatesOut(BaseModel):
+    base: str
+    rates: dict[str, str]
+    as_of: dict[str, date]
+    updated_at: datetime | None
+    source: dict[str, str | None]
+    supported: list[str]
+
+
+class RateHistoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    currency: str
+    per_usd: Decimal
+    effective_date: date
+    source: str | None
+    set_by: str | None
+    created_at: datetime

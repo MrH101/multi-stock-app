@@ -20,6 +20,8 @@ export interface OrderSummary {
   status: OrderStatus;
   currency: string;
   subtotal: string;
+  amount_usd: string | null;
+  fx_rates: Record<string, string> | null;
   item_count: number;
   created_by_name: string;
   created_at: string;
@@ -58,6 +60,7 @@ export interface Budget {
   remaining: string;
   percent_used: number;
   is_set: boolean;
+  unconverted_currencies: string[];
 }
 
 export interface DashboardSummary {
@@ -67,6 +70,25 @@ export interface DashboardSummary {
   currency: string;
   monthly: { month: string; total: string }[];
   top_products: { product_id: number; product_name: string; quantity: number; total: string }[];
+  unconverted_currencies: string[];
+}
+
+export interface Rates {
+  base: string;
+  rates: Record<string, string>;
+  as_of: Record<string, string>;
+  updated_at: string | null;
+  source: Record<string, string | null>;
+  supported: string[];
+}
+
+export interface RateHistory {
+  currency: string;
+  per_usd: string;
+  effective_date: string;
+  source: string | null;
+  set_by: string | null;
+  created_at: string;
 }
 
 export interface CheckoutInput {
@@ -85,7 +107,11 @@ export const ordersApi = {
   checkout: (body: CheckoutInput) => api<Order[]>("orders", "/orders/checkout", { method: "POST", body }),
   changeStatus: (id: number, status: OrderStatus, note?: string) =>
     api<Order>("orders", `/orders/${id}/status`, { method: "POST", body: { status, note } }),
-  summary: () => api<DashboardSummary>("orders", "/orders/summary"),
+  summary: (currency = "USD") => api<DashboardSummary>("orders", "/orders/summary", { query: { currency } }),
+  rates: () => api<Rates>("orders", "/fx/rates"),
+  setRates: (rates: Record<string, number>, source?: string, effective_date?: string) =>
+    api<Rates>("orders", "/admin/fx/rates", { method: "PUT", body: { rates, source: source || undefined, effective_date } }),
+  rateHistory: () => api<RateHistory[]>("orders", "/admin/fx/history"),
   budget: () => api<Budget>("orders", "/budget"),
   setBudget: (amount: number, currency: string) => api<Budget>("orders", "/budget", { method: "PUT", body: { amount, currency } }),
 };

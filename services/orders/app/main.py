@@ -14,7 +14,7 @@ from multistock_common.auth import CurrentUser, OrgType, Principal, Role, requir
 from multistock_common.db import Database
 from multistock_common.events import EventPublisher
 
-from . import schemas, workflow
+from . import fx, schemas, workflow
 from .catalog_client import CatalogClient, get_catalog
 from .config import settings
 from .models import Budget, Order, OrderEvent, OrderLine, OrderStatus
@@ -28,6 +28,7 @@ events = EventPublisher(settings.redis_url, settings.event_stream, "orders",
 async def lifespan(_app):
     db.create_all()
     db.ensure_columns("order_lines", {"schedule": "VARCHAR(20)", "mcaz_registration_number": "VARCHAR(60)"})
+    db.ensure_columns("orders", {"fx_rates": "JSON", "amount_usd": "NUMERIC(14, 2)"})
     yield
 
 
@@ -95,14 +96,17 @@ def checkout(body: schemas.CheckoutRequest, p: Pharmacy, s: DB, catalog: Catalog
     if missing:
         raise HTTPException(409, {"message": "Some items are no longer available", "product_ids": missing})
 
-    by_supplier: dict[int, list[dict]] = defaultdict(list)
+    # One PO per supplier and currency: a PO's lines must share a currency for its total to mean anything.
+    by_supplier: dict[tuple[int, str], list[dict]] = defaultdict(list)
     for pid, qty in quantities.items():
-        by_supplier[products[pid]["supplier_org_id"]].append({"product_id": pid, "quantity": qty})
+        key = (products[pid]["supplier_org_id"], products[pid]["currency"])
+        by_supplier[key].append({"product_id": pid, "quantity": qty})
+    rates = fx.current_rates(s)
 
     reserved_refs: list[str] = []
     orders: list[Order] = []
     try:
-        for supplier_id, lines in by_supplier.items():
+        for (supplier_id, _currency), lines in by_supplier.items():
             order_number = f"PO-{date.today():%y%m%d}-{secrets.token_hex(3).upper()}"
             reserved = catalog.reserve(order_number, lines)
             reserved_refs.append(order_number)
@@ -123,6 +127,8 @@ def checkout(body: schemas.CheckoutRequest, p: Pharmacy, s: DB, catalog: Catalog
                     unit_price=price, line_total=price * r["quantity"], allocations=r["allocations"],
                     schedule=r.get("schedule"), mcaz_registration_number=r.get("mcaz_registration_number")))
             order.subtotal = sum((l.line_total for l in order.lines), Decimal("0"))
+            order.fx_rates = fx.snapshot(rates)
+            order.amount_usd = fx.convert(order.subtotal, order.currency, fx.BASE, rates)
             order.history.append(OrderEvent(status=OrderStatus.SUBMITTED, note=body.notes, actor_name=p.name,
                                             actor_org_name=p.org_name, at=_now()))
             s.add(order)
@@ -160,7 +166,7 @@ def list_orders(p: CurrentUser, s: DB, status: list[OrderStatus] = Query(default
 
 
 @app.get("/orders/summary", response_model=schemas.DashboardSummary, tags=["reports"])
-def dashboard_summary(p: CurrentUser, s: DB, currency: str = "USD"):
+def dashboard_summary(p: CurrentUser, s: DB, currency: str = Query("USD", pattern="^(USD|ZWG|ZAR)$")):
     counts = dict(s.execute(_scope(select(Order.status, func.count()), p).group_by(Order.status)).all())
     counts = {st: counts.get(st, 0) for st in OrderStatus}
     open_orders = sum(counts[st] for st in workflow.OPEN)
@@ -169,27 +175,35 @@ def dashboard_summary(p: CurrentUser, s: DB, currency: str = "USD"):
     since = date(months_back // 12, months_back % 12 + 1, 1)
     rows = s.scalars(_scope(select(Order), p).options(selectinload(Order.lines))
                      .where(Order.created_at >= datetime.combine(since, datetime.min.time(), timezone.utc),
-                            Order.currency == currency, Order.status.in_(workflow.COMMITTED_SPEND))).all()
+                            Order.status.in_(workflow.COMMITTED_SPEND))).all()
     monthly: dict[str, Decimal] = {}
     cursor = since
     while cursor <= date.today():
         monthly[f"{cursor:%Y-%m}"] = Decimal("0")
         cursor = date(cursor.year + cursor.month // 12, cursor.month % 12 + 1, 1)
+    today_rates = fx.current_rates(s)
     top: dict[int, dict] = {}
+    unconverted: set[str] = set()
     for o in rows:
+        rates = {**today_rates, **fx.parse(o.fx_rates)} if o.fx_rates else today_rates
+        value = fx.convert(o.subtotal, o.currency, currency, rates)
+        if value is None:
+            unconverted.add(o.currency)
+            continue
         key = f"{o.created_at:%Y-%m}"
         if key in monthly:
-            monthly[key] += o.subtotal
+            monthly[key] += value
         for l in o.lines:
-            t = top.setdefault(l.product_id, {"product_id": l.product_id, "product_name": l.product_name,
-                                              "quantity": 0, "total": Decimal("0")})
-            t["quantity"] += l.quantity
-            t["total"] += l.line_total
+            t_ = top.setdefault(l.product_id, {"product_id": l.product_id, "product_name": l.product_name,
+                                               "quantity": 0, "total": Decimal("0")})
+            t_["quantity"] += l.quantity
+            t_["total"] += fx.convert(l.line_total, o.currency, currency, rates)
     return {
         "counts": counts, "open_orders": open_orders, "currency": currency,
         "month_total": monthly.get(f"{date.today():%Y-%m}", Decimal("0")),
         "monthly": [{"month": m, "total": v} for m, v in monthly.items()],
         "top_products": sorted(top.values(), key=lambda x: x["total"], reverse=True)[:5],
+        "unconverted_currencies": sorted(unconverted),
     }
 
 
@@ -234,18 +248,28 @@ def change_status(order_id: int, body: schemas.StatusChange, p: CurrentUser, s: 
 
 # ---------------------------------------------------------------- budgets
 def _budget_out(s: Session, org_id: int) -> dict:
+    """This month's budget with committed spend from orders in *any* currency, converted at each order's
+    checkout rate (orders from before rates were recorded use today's rate)."""
     period = _month_start()
     budget = s.scalar(select(Budget).where(Budget.pharmacy_org_id == org_id, Budget.period == period))
     currency = budget.currency if budget else "USD"
-    committed = s.scalar(select(func.coalesce(func.sum(Order.subtotal), 0)).where(
-        Order.pharmacy_org_id == org_id, Order.currency == currency,
-        Order.status.in_(workflow.COMMITTED_SPEND),
-        Order.created_at >= datetime.combine(period, datetime.min.time(), timezone.utc))) or Decimal("0")
-    committed = Decimal(str(committed))
+    orders = s.execute(select(Order.subtotal, Order.currency, Order.fx_rates).where(
+        Order.pharmacy_org_id == org_id, Order.status.in_(workflow.COMMITTED_SPEND),
+        Order.created_at >= datetime.combine(period, datetime.min.time(), timezone.utc))).all()
+    today_rates = fx.current_rates(s)
+    committed, unconverted = Decimal("0.00"), set()
+    for subtotal, cur, snap in orders:
+        rates = {**today_rates, **fx.parse(snap)} if snap else today_rates
+        value = fx.convert(subtotal, cur, currency, rates)
+        if value is None:
+            unconverted.add(cur)
+        else:
+            committed += value
     amount = budget.amount if budget else Decimal("0")
     return {"period": period, "amount": amount, "currency": currency, "committed": committed,
             "remaining": amount - committed, "is_set": budget is not None,
-            "percent_used": float(committed / amount * 100) if amount else 0.0}
+            "percent_used": float(committed / amount * 100) if amount else 0.0,
+            "unconverted_currencies": sorted(unconverted)}
 
 
 @app.get("/budget", response_model=schemas.BudgetOut, tags=["budget"])
@@ -265,6 +289,31 @@ def set_budget(body: schemas.BudgetIn, s: DB, p: Principal = require_org(OrgType
     budget.amount, budget.currency = body.amount, body.currency.upper()
     s.commit()
     return _budget_out(s, p.org_id)
+
+
+# ---------------------------------------------------------------- exchange rates
+@app.get("/fx/rates", response_model=schemas.RatesOut, tags=["exchange rates"])
+def get_rates(_p: CurrentUser, s: DB):
+    return fx.info(s)
+
+
+@app.put("/admin/fx/rates", response_model=schemas.RatesOut, tags=["exchange rates"])
+def set_rates(body: schemas.RatesIn, s: DB, p: Principal = require_org(OrgType.PLATFORM)):
+    effective = body.effective_date or date.today()
+    if effective > date.today():
+        raise HTTPException(400, "The effective date cannot be in the future")
+    for currency, per_usd in body.rates.items():
+        s.add(fx.ExchangeRate(currency=currency, per_usd=per_usd, effective_date=effective, source=body.source,
+                              set_by=p.name, set_by_user_id=p.user_id))
+    s.commit()
+    out = fx.info(s)
+    events.publish("fx.rates_updated", {"rates": out["rates"], "effective_date": effective.isoformat()})
+    return out
+
+
+@app.get("/admin/fx/history", response_model=list[schemas.RateHistoryOut], tags=["exchange rates"])
+def rate_history(s: DB, _p: Principal = require_org(OrgType.PLATFORM), limit: int = Query(60, ge=1, le=500)):
+    return s.scalars(select(fx.ExchangeRate).order_by(fx.ExchangeRate.id.desc()).limit(limit)).all()
 
 
 # ---------------------------------------------------------------- internal (monitoring agent)
@@ -305,4 +354,4 @@ def monitoring_snapshot(s: DB, demand_days: int = Query(90, ge=7, le=365)):
     demand = [{"pharmacy_org_id": ph, "supplier_org_id": sup, "product_id": pid, "product_name": name,
                "quantity": int(qty), "order_count": int(n)} for ph, sup, pid, name, qty, n in demand_rows]
     return {"as_of": today, "budgets": budgets, "open_orders": open_orders, "demand": demand,
-            "demand_days": demand_days}
+            "demand_days": demand_days, "fx": fx.info(s)}

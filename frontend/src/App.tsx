@@ -23,6 +23,7 @@ const PharmacyDashboard = lazy(() => import("@/modules/dashboard/PharmacyDashboa
 const SupplierDashboard = lazy(() => import("@/modules/dashboard/SupplierDashboard"));
 const InsightsPage = lazy(() => import("@/modules/insights/InsightsPage"));
 const MonitoringPage = lazy(() => import("@/modules/insights/MonitoringPage"));
+const RatesPage = lazy(() => import("@/modules/orders/RatesPage"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const token = useSession((s) => s.accessToken);
@@ -57,6 +58,7 @@ export function App() {
           <Route path="announcements" element={<AnnouncementsPage />} />
           <Route path="insights" element={<InsightsPage />} />
           <Route path="monitoring" element={<Only when={isAdmin}><MonitoringPage /></Only>} />
+          <Route path="rates" element={<Only when={isAdmin}><RatesPage /></Only>} />
           <Route path="team" element={<TeamPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

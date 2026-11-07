@@ -33,6 +33,8 @@ class FakeCatalog:
                 "unit_price": "12.50", "currency": "USD", "is_active": True, "qty": 100},
             2: {"id": 2, "name": "Panado", "supplier_org_id": 10, "supplier_name": "Pharma Wholesale",
                 "unit_price": "2.00", "currency": "USD", "is_active": True, "qty": 100},
+            4: {"id": 4, "name": "Cotrimoxazole 480mg", "supplier_org_id": 10, "supplier_name": "Pharma Wholesale",
+                "unit_price": "268.00", "currency": "ZWG", "is_active": True, "qty": 100},
             3: {"id": 3, "name": "Insulin Pen", "supplier_org_id": 11, "supplier_name": "Other Wholesale",
                 "unit_price": "30.00", "currency": "USD", "is_active": True, "qty": 5},
         }
@@ -56,7 +58,7 @@ class FakeCatalog:
             p = self.stock[l["product_id"]]
             out.append({"product_id": p["id"], "product_name": p["name"], "generic_name": None, "strength": None,
                         "pack_size": None, "supplier_org_id": p["supplier_org_id"], "supplier_name": p["supplier_name"],
-                        "unit_price": p["unit_price"], "currency": "USD", "quantity": l["quantity"],
+                        "unit_price": p["unit_price"], "currency": p["currency"], "quantity": l["quantity"],
                         "schedule": "PP", "mcaz_registration_number": f"MCAZ-{p['id']}",
                         "allocations": [{"batch_number": "B1", "expiry_date": "2030-01-01", "quantity": l["quantity"]}]})
         return out

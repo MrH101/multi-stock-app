@@ -80,3 +80,15 @@ def test_platform_health():
     kinds = {f.kind for f in found}
     assert kinds == {"service_down", "monitoring_source_failed", "llm_unavailable"}
     assert rules.platform_health(None, {"orders": {"up": False}}, [], False, None) == []
+
+
+def test_fx_freshness():
+    from datetime import date, timedelta
+    today = date(2026, 11, 7)
+    assert rules.fx_freshness(1, {"as_of": {}}, CFG, today)[0].kind == "fx_missing"
+    fresh = {"as_of": {"ZWG": (today - timedelta(days=1)).isoformat()}, "rates": {"ZWG": "26.8"}}
+    assert rules.fx_freshness(1, fresh, CFG, today) == []
+    stale = {"as_of": {"ZWG": (today - timedelta(days=3)).isoformat()}, "rates": {"ZWG": "26.8"}}
+    [f] = rules.fx_freshness(1, stale, CFG, today)
+    assert f.kind == "fx_stale" and "3 days old" in f.title and f.org_id == 1
+    assert rules.fx_freshness(None, stale, CFG, today) == []

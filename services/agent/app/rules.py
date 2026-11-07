@@ -231,6 +231,27 @@ def supply_watch(snapshot: dict, inventory: dict) -> list[Finding]:
     return out
 
 
+# ---------------------------------------------------------------- platform: exchange rate freshness
+def fx_freshness(platform_org_id: int | None, fx: dict | None, cfg: Settings, today: date | None = None) -> list[Finding]:
+    """ZiG prices, budgets and reports convert at the platform's rate, so a stale rate misleads everyone."""
+    if platform_org_id is None or fx is None:
+        return []
+    today = today or date.today()
+    as_of = _date((fx.get("as_of") or {}).get("ZWG"))
+    if as_of is None:
+        return [Finding(platform_org_id, "fx:ZWG", "fx_missing", Severity.WARNING, "No ZiG exchange rate has been set",
+                        "Budgets and reports can't count ZiG orders, and pharmacies can't see USD/ZiG equivalents, "
+                        "until today's USD→ZiG rate is entered.", "/rates", {})]
+    age = (today - as_of).days
+    if age < cfg.fx_stale_days:
+        return []
+    rate = (fx.get("rates") or {}).get("ZWG")
+    return [Finding(platform_org_id, "fx:ZWG", "fx_stale", Severity.WARNING,
+                    f"The ZiG exchange rate is {age} days old",
+                    f"Still using {rate} ZiG per USD from {as_of:%d %b %Y}. Enter today's rate so prices and budgets "
+                    "stay accurate.", "/rates", {"as_of": as_of.isoformat(), "rate": rate, "age_days": age})]
+
+
 # ---------------------------------------------------------------- platform operators
 def platform_health(platform_org_id: int | None, health: dict[str, dict], source_errors: list[str],
                     llm_enabled: bool, llm_error: str | None) -> list[Finding]:
