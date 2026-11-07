@@ -1,7 +1,7 @@
 import secrets
 from collections import defaultdict
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Annotated
 
@@ -10,7 +10,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from multistock_common.app import create_app
-from multistock_common.auth import CurrentUser, OrgType, Principal, Role, require_org
+from multistock_common.auth import CurrentUser, OrgType, Principal, Role, require_org, require_service
 from multistock_common.db import Database
 from multistock_common.events import EventPublisher
 
@@ -263,3 +263,44 @@ def set_budget(body: schemas.BudgetIn, s: DB, p: Principal = require_org(OrgType
     budget.amount, budget.currency = body.amount, body.currency.upper()
     s.commit()
     return _budget_out(s, p.org_id)
+
+
+# ---------------------------------------------------------------- internal (monitoring agent)
+@app.get("/internal/monitoring/snapshot", tags=["internal"], dependencies=[Depends(require_service)])
+def monitoring_snapshot(s: DB, demand_days: int = Query(90, ge=7, le=365)):
+    """Everything the monitoring agent needs from this service in one call: this month's budgets with
+    committed spend, open orders with how long they have sat in their current status, and what each
+    pharmacy has been ordering (so it can watch supply of the items they depend on)."""
+    import calendar
+
+    today = date.today()
+    period = _month_start()
+    budgets = []
+    for b in s.scalars(select(Budget).where(Budget.period == period)):
+        out = {k: str(v) if isinstance(v, Decimal) else v for k, v in _budget_out(s, b.pharmacy_org_id).items()}
+        budgets.append({**out, "pharmacy_org_id": b.pharmacy_org_id, "days_elapsed": today.day,
+                        "days_in_month": calendar.monthrange(today.year, today.month)[1]})
+
+    last_change = (select(OrderEvent.order_id, func.max(OrderEvent.at).label("at"))
+                   .group_by(OrderEvent.order_id).subquery())
+    open_rows = s.execute(select(Order, last_change.c.at).outerjoin(last_change, last_change.c.order_id == Order.id)
+                          .where(Order.status.in_(workflow.OPEN))).all()
+    open_orders = [{
+        "id": o.id, "order_number": o.order_number, "status": o.status,
+        "pharmacy_org_id": o.pharmacy_org_id, "pharmacy_name": o.pharmacy_name,
+        "supplier_org_id": o.supplier_org_id, "supplier_name": o.supplier_name,
+        "subtotal": str(o.subtotal), "currency": o.currency, "created_at": o.created_at,
+        "status_since": at or o.created_at,
+    } for o, at in open_rows]
+
+    since = datetime.combine(today, datetime.min.time(), timezone.utc) - timedelta(days=demand_days)
+    demand_rows = s.execute(
+        select(Order.pharmacy_org_id, Order.supplier_org_id, OrderLine.product_id, OrderLine.product_name,
+               func.sum(OrderLine.quantity), func.count(func.distinct(Order.id)))
+        .join(OrderLine, OrderLine.order_id == Order.id)
+        .where(Order.created_at >= since, Order.status.in_(workflow.COMMITTED_SPEND))
+        .group_by(Order.pharmacy_org_id, Order.supplier_org_id, OrderLine.product_id, OrderLine.product_name)).all()
+    demand = [{"pharmacy_org_id": ph, "supplier_org_id": sup, "product_id": pid, "product_name": name,
+               "quantity": int(qty), "order_count": int(n)} for ph, sup, pid, name, qty, n in demand_rows]
+    return {"as_of": today, "budgets": budgets, "open_orders": open_orders, "demand": demand,
+            "demand_days": demand_days}

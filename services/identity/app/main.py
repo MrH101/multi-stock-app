@@ -6,7 +6,8 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from multistock_common.app import create_app
-from multistock_common.auth import CurrentUser, OrgType, Principal, Role, decode_token, require_org, require_role
+from multistock_common.auth import (CurrentUser, OrgType, Principal, Role, decode_token, require_org, require_role,
+                                    require_service)
 from multistock_common.db import Database
 from multistock_common.events import EventPublisher
 
@@ -190,3 +191,11 @@ def update_team_member(user_id: int, body: schemas.UserUpdate, s: DB, p: Princip
         setattr(user, k, v)
     s.commit()
     return user
+
+
+# ---------------------------------------------------------------- internal (monitoring agent)
+@app.get("/internal/organizations", tags=["internal"], dependencies=[Depends(require_service)])
+def internal_organizations(s: DB):
+    """Directory snapshot for the monitoring agent: who exists, what type, and whether active."""
+    return [{"id": o.id, "name": o.name, "type": o.type, "is_active": o.is_active, "verified": o.verified}
+            for o in s.scalars(select(Organization).order_by(Organization.id))]

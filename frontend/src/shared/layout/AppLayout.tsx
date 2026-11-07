@@ -2,10 +2,11 @@ import { AppShell, Avatar, Badge, Burger, Button, Group, Menu, NavLink, Text, Th
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconBuildingStore, IconChevronDown, IconClipboardList, IconLayoutDashboard, IconLogout, IconMessages,
-  IconPackage, IconPlus, IconSearch, IconSettings, IconShieldCheck, IconShoppingCart, IconSpeakerphone, IconUsers,
+  IconActivity, IconPackage, IconPlus, IconSearch, IconSparkles, IconSettings, IconShieldCheck, IconShoppingCart, IconSpeakerphone, IconUsers,
 } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { insightsApi } from "@/modules/insights/api";
 import { messagingApi } from "@/modules/messaging/api";
 import { NotificationBell } from "@/modules/messaging/NotificationBell";
 import { cartCount, useCart } from "@/modules/orders/cart";
@@ -29,10 +30,14 @@ export function AppLayout() {
   const lines = useCart((s) => s.lines);
   const unread = useQuery({ queryKey: ["unread"], queryFn: messagingApi.unread, refetchInterval: 60_000, enabled: !isAdmin });
   const msgs = unread.data?.messages ?? 0;
+  const alertCounts = useQuery({ queryKey: ["insights", "counts"], queryFn: insightsApi.counts, refetchInterval: 120_000 });
+  const urgent = (alertCounts.data?.critical ?? 0) + (alertCounts.data?.warning ?? 0);
+  const insights: NavItem = { to: "/insights", label: "Insights", icon: IconSparkles, badge: urgent };
 
   const nav: NavItem[] = isPharmacy
     ? [
         { to: "/", label: "Dashboard", icon: IconLayoutDashboard },
+        insights,
         { to: "/catalog", label: "Order medicines", icon: IconSearch },
         { to: "/orders", label: "My orders", icon: IconClipboardList },
         { to: "/suppliers", label: "Suppliers", icon: IconBuildingStore },
@@ -42,6 +47,7 @@ export function AppLayout() {
     : isSupplier
       ? [
           { to: "/", label: "Dashboard", icon: IconLayoutDashboard },
+          insights,
           { to: "/orders", label: "Incoming orders", icon: IconClipboardList },
           { to: "/inventory", label: "Products & stock", icon: IconPackage },
           { to: "/pharmacies", label: "Pharmacies", icon: IconBuildingStore },
@@ -50,6 +56,8 @@ export function AppLayout() {
         ]
       : [
           { to: "/", label: "Organisations", icon: IconShieldCheck },
+          { to: "/monitoring", label: "Monitoring", icon: IconActivity, badge: urgent },
+          { to: "/insights", label: "Ask the assistant", icon: IconSparkles },
           { to: "/orders", label: "All orders", icon: IconClipboardList },
           { to: "/announcements", label: "Announcements", icon: IconSpeakerphone },
         ];

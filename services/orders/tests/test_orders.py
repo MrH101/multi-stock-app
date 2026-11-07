@@ -81,3 +81,20 @@ def test_budget_tracks_committed_spend(client):
     assert summary["open_orders"] == 1 and summary["counts"]["CANCELLED"] == 1
     assert summary["month_total"] == "100.00" and len(summary["monthly"]) == 6
     assert summary["top_products"][0]["product_name"] == "Amoxil 500mg"
+
+
+def test_monitoring_snapshot(client, catalog):
+    from tests.conftest import SERVICE
+    client.put("/budget", headers=PHARMACY, json={"amount": "100.00", "currency": "USD"})
+    checkout(client, [{"product_id": 1, "quantity": 2}])
+    checkout(client, [{"product_id": 1, "quantity": 1}])
+
+    assert client.get("/internal/monitoring/snapshot").status_code == 403
+    snap = client.get("/internal/monitoring/snapshot", headers=SERVICE).json()
+    [budget] = snap["budgets"]
+    assert budget["pharmacy_org_id"] == 20 and budget["committed"] == "37.50" and budget["days_in_month"] >= 28
+    assert len(snap["open_orders"]) == 2 and all(o["status"] == "SUBMITTED" for o in snap["open_orders"])
+    assert snap["open_orders"][0]["status_since"]
+    [demand] = snap["demand"]
+    assert demand == {"pharmacy_org_id": 20, "supplier_org_id": 10, "product_id": 1, "product_name": "Amoxil 500mg",
+                      "quantity": 3, "order_count": 2}

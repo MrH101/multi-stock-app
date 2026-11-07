@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ordersApi } from "@/modules/orders/api";
 import { BudgetCard } from "@/modules/orders/BudgetCard";
+import { InsightsWidget } from "@/modules/insights/InsightsWidget";
 import { useAccount } from "@/shared/auth/session";
 import { money } from "@/shared/format";
 import { LatestAnnouncements, MonthlyChart, RecentOrders, StatCard } from "./widgets";
@@ -29,6 +30,7 @@ export default function PharmacyDashboard() {
         <StatCard label="Spent this month" value={s ? money(s.month_total, s.currency) : "—"} icon={IconCash} />
         <BudgetCard />
       </SimpleGrid>
+      <InsightsWidget />
       <Grid gutter="lg">
         <Grid.Col span={{ base: 12, lg: 7 }}><RecentOrders title="Recent orders" counterpart="supplier" /></Grid.Col>
         <Grid.Col span={{ base: 12, lg: 5 }}><LatestAnnouncements /></Grid.Col>

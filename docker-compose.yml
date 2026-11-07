@@ -68,6 +68,20 @@ services:
       <<: *env
       DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/notifications
 
+  agent:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: agent } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/agent
+      IDENTITY_URL: http://identity:8000
+      CATALOG_URL: http://catalog:8000
+      ORDERS_URL: http://orders:8000
+      NOTIFICATIONS_URL: http://notifications:8000
+      MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-900}
+      CAIMEX_API_KEY: ${CAIMEX_API_KEY:-}
+      CAIMEX_MODEL: ${CAIMEX_MODEL:-gpt-5.4-mini-2026-03-17}
+
   frontend:
     build: ./frontend
     restart: unless-stopped
@@ -76,7 +90,7 @@ services:
     image: nginx:1.27-alpine
     volumes: [./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro]
     ports: ["8080:80"]
-    depends_on: [identity, catalog, orders, notifications, frontend]
+    depends_on: [identity, catalog, orders, notifications, agent, frontend]
 
 volumes:
   pgdata:

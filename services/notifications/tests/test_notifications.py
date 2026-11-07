@@ -62,3 +62,13 @@ def test_websocket_requires_valid_token(client):
     good = PHARMACY["Authorization"][7:]
     with client.websocket_connect(f"/ws?token={good}") as ws:
         ws.send_text("ping")
+
+
+def test_agent_alerts_become_notifications(client):
+    with db.SessionLocal() as s:
+        handle_event(s, {"type": "agent.alert", "payload": {"org_id": 10, "severity": "critical", "alert_id": 3,
+                                                            "title": "Amoxil is out of stock", "body": "No stock left.",
+                                                            "link": "/inventory/1"}})
+    [n] = client.get("/notifications", headers=SUPPLIER).json()
+    assert n["title"] == "Urgent: Amoxil is out of stock" and n["link"] == "/inventory/1" and n["kind"] == "insight"
+    assert client.get("/notifications", headers=PHARMACY).json() == []

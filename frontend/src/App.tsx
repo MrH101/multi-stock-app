@@ -21,6 +21,8 @@ const MessagesPage = lazy(() => import("@/modules/messaging/MessagesPage"));
 const AnnouncementsPage = lazy(() => import("@/modules/messaging/AnnouncementsPage"));
 const PharmacyDashboard = lazy(() => import("@/modules/dashboard/PharmacyDashboard"));
 const SupplierDashboard = lazy(() => import("@/modules/dashboard/SupplierDashboard"));
+const InsightsPage = lazy(() => import("@/modules/insights/InsightsPage"));
+const MonitoringPage = lazy(() => import("@/modules/insights/MonitoringPage"));
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const token = useSession((s) => s.accessToken);
@@ -53,6 +55,8 @@ export function App() {
           <Route path="messages" element={<Only when={!isAdmin}><MessagesPage /></Only>} />
           <Route path="messages/:conversationId" element={<Only when={!isAdmin}><MessagesPage /></Only>} />
           <Route path="announcements" element={<AnnouncementsPage />} />
+          <Route path="insights" element={<InsightsPage />} />
+          <Route path="monitoring" element={<Only when={isAdmin}><MonitoringPage /></Only>} />
           <Route path="team" element={<TeamPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

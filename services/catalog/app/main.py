@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Query
@@ -62,10 +62,12 @@ def search_products(
     page_size: int = Query(25, ge=1, le=100),
 ):
     stmt = select(Product).where(Product.is_active.is_(True))
-    if q:
-        term = f"%{q.lower()}%"
+    for word in (q or "").lower().split()[:6]:
+        # every word must match some field, so "amoxicillin 500mg" or "panado gsk" both work
+        term = f"%{word}%"
         stmt = stmt.where(or_(func.lower(Product.name).like(term), func.lower(Product.generic_name).like(term),
-                              func.lower(Product.manufacturer).like(term), func.lower(Product.sku).like(term)))
+                              func.lower(Product.manufacturer).like(term), func.lower(Product.sku).like(term),
+                              func.lower(Product.strength).like(term)))
     if dosage_form:
         stmt = stmt.where(Product.dosage_form == dosage_form)
     if supplier_org_id:
@@ -232,3 +234,40 @@ def release_reservation(order_ref: str, s: DB):
 @app.post("/internal/reservations/{order_ref}/commit", tags=["internal"], dependencies=[Depends(require_service)])
 def commit_reservation(order_ref: str, s: DB):
     return {"committed": stock.commit(s, order_ref)}
+
+
+@app.get("/internal/monitoring/inventory", tags=["internal"], dependencies=[Depends(require_service)])
+def monitoring_inventory(s: DB, expiry_days: int = Query(90, ge=1, le=730), demand_days: int = Query(30, ge=1, le=365)):
+    """Stock snapshot for the monitoring agent: every active product with its sellable stock and
+    recent demand (net units reserved by orders), plus every batch that is expired or expiring soon."""
+    today = date.today()
+    since = datetime.combine(today - timedelta(days=demand_days), datetime.min.time(), timezone.utc)
+    products = s.scalars(select(Product).where(Product.is_active.is_(True))).all()
+    summary = stock.stock_summary(s, [p.id for p in products])
+    demand = dict(s.execute(
+        select(Batch.product_id, func.coalesce(func.sum(-StockMovement.change), 0))
+        .join(Batch, Batch.id == StockMovement.batch_id)
+        .where(StockMovement.created_at >= since,
+               StockMovement.reason.in_([MovementReason.RESERVED, MovementReason.RELEASED]))
+        .group_by(Batch.product_id)).all())
+    batches = s.execute(
+        select(Batch, Product).join(Product)
+        .where(Product.is_active.is_(True), Batch.quantity_available > 0,
+               Batch.expiry_date <= today + timedelta(days=expiry_days))
+        .order_by(Batch.expiry_date)).all()
+    return {
+        "as_of": today,
+        "demand_days": demand_days,
+        "products": [{
+            "id": p.id, "supplier_org_id": p.supplier_org_id, "supplier_name": p.supplier_name, "name": p.name,
+            "generic_name": p.generic_name, "strength": p.strength, "reorder_level": p.reorder_level,
+            "unit_price": str(p.unit_price), "currency": p.currency,
+            "stock_available": summary.get(p.id, (0, None))[0], "nearest_expiry": summary.get(p.id, (0, None))[1],
+            "demand_units": max(int(demand.get(p.id, 0)), 0),
+        } for p in products],
+        "batches": [{
+            "batch_id": b.id, "product_id": p.id, "supplier_org_id": p.supplier_org_id, "product_name": p.name,
+            "batch_number": b.batch_number, "expiry_date": b.expiry_date, "quantity_available": b.quantity_available,
+            "value": str(b.quantity_available * p.unit_price), "currency": p.currency,
+        } for b, p in batches],
+    }
