@@ -192,3 +192,21 @@ class InternalProduct(BaseModel):
     unit_price: Decimal
     currency: str
     is_active: bool
+
+
+# ---- price-list import
+class ImportRowOut(BaseModel):
+    row: int
+    sku: str | None
+    name: str | None
+    action: str
+    messages: list[str]
+    batch: str | None
+
+
+class ImportReportOut(BaseModel):
+    committed: bool
+    summary: dict[str, int]
+    columns: dict[str, str]
+    ignored_columns: list[str]
+    rows: list[ImportRowOut]

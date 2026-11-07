@@ -1,7 +1,7 @@
-import { Badge, Button, Card, Modal, Table, Text, TextInput } from "@mantine/core";
+import { Badge, Button, Card, Group, Modal, Table, Text, TextInput } from "@mantine/core";
 import { useDebouncedValue, useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconPlus, IconSearch } from "@tabler/icons-react";
+import { IconFileSpreadsheet, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,12 +9,14 @@ import { useAccount } from "@/shared/auth/session";
 import { DOSAGE_FORMS, money } from "@/shared/format";
 import { EmptyState, ErrorNotice, ExpiryBadge, Loading, PageHeader, StockBadge } from "@/shared/ui";
 import { catalogApi } from "./api";
+import { ImportPriceList } from "./ImportPriceList";
 import { ProductForm } from "./ProductForm";
 
 export default function InventoryPage() {
   const [q, setQ] = useState("");
   const [debounced] = useDebouncedValue(q, 250);
   const [opened, { open, close }] = useDisclosure();
+  const [importing, importer] = useDisclosure();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { canManage } = useAccount();
@@ -32,12 +34,18 @@ export default function InventoryPage() {
   return (
     <>
       <PageHeader title="Products & stock" description="Your catalogue. Stock is tracked per batch and expiry date."
-        actions={canManage && <Button leftSection={<IconPlus size={18} />} onClick={open}>Add product</Button>} />
+        actions={canManage && (
+          <>
+            <Button variant="light" leftSection={<IconFileSpreadsheet size={18} />} onClick={importer.open}>Import price list</Button>
+            <Button leftSection={<IconPlus size={18} />} onClick={open}>Add product</Button>
+          </>
+        )} />
+      <ImportPriceList opened={importing} onClose={importer.close} />
       <TextInput leftSection={<IconSearch size={16} />} placeholder="Search your products" value={q} onChange={(e) => setQ(e.currentTarget.value)} mb="md" maw={400} />
       {products.error && <ErrorNotice error={products.error} />}
       <Card p={0}>
         {products.isLoading ? <Loading /> : products.data?.items.length === 0 ? (
-          <EmptyState title="No products yet" description="Add your first product, then receive stock against it." action={canManage && <Button onClick={open}>Add product</Button>} />
+          <EmptyState title="No products yet" description="Import your existing price list (CSV or Excel), or add products one by one." action={canManage && <Group><Button onClick={importer.open} leftSection={<IconFileSpreadsheet size={16} />}>Import price list</Button><Button variant="default" onClick={open}>Add product</Button></Group>} />
         ) : (
           <Table.ScrollContainer minWidth={860}>
             <Table>

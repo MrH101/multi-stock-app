@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, File, HTTPException, Query, Response, UploadFile
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -151,6 +152,36 @@ def update_product(product_id: int, body: schemas.ProductUpdate, p: Supplier, s:
     if "unit_price" in changes:
         events.publish("product.price_changed", {"product_id": product.id, "unit_price": str(product.unit_price)})
     return _with_stock(s, [product])[0]
+
+
+# ---------------------------------------------------------------- supplier: price-list import
+@app.post("/supplier/imports", response_model=schemas.ImportReportOut, tags=["supplier"])
+async def import_price_list(p: Supplier, s: DB, file: UploadFile = File(...),
+                            commit: bool = Query(False, description="false = preview only; true = apply valid rows")):
+    """Upsert products by SKU from a CSV/Excel price list, optionally receiving opening stock per batch.
+
+    Run with `commit=false` first to preview. With `commit=true`, valid rows are applied and rows with errors
+    are skipped and reported."""
+    from .importer import MAX_BYTES, run_import
+
+    content = await file.read(MAX_BYTES + 1)
+    try:
+        report = await run_in_threadpool(run_import, s, p.org_id, p.org_name, p.user_id, file.filename or "",
+                                         content, settings.default_currency, commit)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    if commit and (report.summary["create"] or report.summary["update"]):
+        events.publish("catalog.imported", {"supplier_org_id": p.org_id, **report.summary})
+    return {"committed": report.committed, "summary": report.summary, "columns": report.columns,
+            "ignored_columns": report.ignored_columns, "rows": [r.__dict__ for r in report.rows]}
+
+
+@app.get("/supplier/imports/template.csv", tags=["supplier"])
+def import_template(_p: Supplier):
+    from .importer import TEMPLATE
+
+    return Response(TEMPLATE, media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="multistock-price-list-template.csv"'})
 
 
 # ---------------------------------------------------------------- supplier: batches & stock
