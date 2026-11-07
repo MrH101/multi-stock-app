@@ -1,0 +1,4 @@
+@media print {
+  .mantine-AppShell-header, .mantine-AppShell-navbar, .no-print { display: none !important; }
+  .mantine-AppShell-main { padding: 0 !important; background: white !important; }
+}

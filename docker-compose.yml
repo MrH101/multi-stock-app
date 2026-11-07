@@ -1,0 +1,83 @@
+x-service: &service
+  build:
+    context: .
+    dockerfile: services/Dockerfile
+  restart: unless-stopped
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+
+x-env: &env
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  JWT_SECRET: ${JWT_SECRET:-dev-only-change-me-dev-only-change-me}
+  SERVICE_TOKEN: ${SERVICE_TOKEN:-dev-service-token}
+  REDIS_URL: redis://redis:6379/0
+  CORS_ORIGINS: '["http://localhost:8080"]'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: multistock
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-multistock}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U multistock"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  identity:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: identity } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/identity
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@multistock.app}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
+
+  catalog:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: catalog } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/catalog
+
+  orders:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: orders } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/orders
+      CATALOG_URL: http://catalog:8000
+
+  notifications:
+    <<: *service
+    build: { context: ., dockerfile: services/Dockerfile, args: { SERVICE: notifications } }
+    environment:
+      <<: *env
+      DATABASE_URL: postgresql+psycopg://multistock:${POSTGRES_PASSWORD:-multistock}@postgres:5432/notifications
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.27-alpine
+    volumes: [./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro]
+    ports: ["8080:80"]
+    depends_on: [identity, catalog, orders, notifications, frontend]
+
+volumes:
+  pgdata:
+  redisdata:
