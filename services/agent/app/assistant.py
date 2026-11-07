@@ -155,5 +155,6 @@ class Assistant:
 
 def _slim_product(x: dict) -> dict:
     keys = ("id", "name", "generic_name", "strength", "dosage_form", "pack_size", "manufacturer", "supplier_name",
-            "unit_price", "currency", "stock_available", "nearest_expiry", "reorder_level", "schedule", "is_active")
+            "unit_price", "currency", "stock_available", "nearest_expiry", "reorder_level", "schedule",
+            "mcaz_registration_number", "is_active")
     return {k: x.get(k) for k in keys if k in x}

@@ -14,7 +14,7 @@ from multistock_common.events import EventPublisher
 
 from . import schemas, stock
 from .config import settings
-from .models import Batch, DosageForm, MovementReason, Product, StockMovement
+from .models import Batch, DosageForm, MovementReason, Product, Schedule, StockMovement
 
 db = Database(settings.database_url)
 events = EventPublisher(settings.redis_url, settings.event_stream, "catalog",
@@ -24,7 +24,21 @@ events = EventPublisher(settings.redis_url, settings.event_stream, "catalog",
 @asynccontextmanager
 async def lifespan(_app):
     db.create_all()
+    upgrade_schema()
     yield
+
+
+def upgrade_schema() -> None:
+    """Additive changes for databases created before issue #3 (MCAZ categories + registration number)."""
+    from sqlalchemy import update
+    from .models import LEGACY_SCHEDULE
+
+    db.ensure_columns("products", {"mcaz_registration_number": "VARCHAR(60)"})
+    with db.SessionLocal() as s:
+        for old, new in LEGACY_SCHEDULE.items():
+            s.execute(update(Product).where(Product.schedule == old).values(schedule=new)
+                      .execution_options(synchronize_session=False))
+        s.commit()
 
 
 app = create_app(settings, "Catalog & Inventory Service")
@@ -54,7 +68,8 @@ def _own_product(s: Session, product_id: int, p: Principal) -> Product:
 @app.get("/products", response_model=schemas.ProductPage, tags=["catalog"])
 def search_products(
     _p: CurrentUser, s: DB,
-    q: str | None = Query(None, description="Search brand name, generic name or manufacturer"),
+    q: str | None = Query(None, description="Search brand, generic name, strength, manufacturer, SKU or MCAZ reg. no."),
+    schedule: list[Schedule] = Query(default=[], description="Filter by MCAZ supply category"),
     dosage_form: DosageForm | None = None,
     supplier_org_id: int | None = None,
     in_stock: bool = False,
@@ -67,9 +82,12 @@ def search_products(
         term = f"%{word}%"
         stmt = stmt.where(or_(func.lower(Product.name).like(term), func.lower(Product.generic_name).like(term),
                               func.lower(Product.manufacturer).like(term), func.lower(Product.sku).like(term),
-                              func.lower(Product.strength).like(term)))
+                              func.lower(Product.strength).like(term),
+                              func.lower(Product.mcaz_registration_number).like(term)))
     if dosage_form:
         stmt = stmt.where(Product.dosage_form == dosage_form)
+    if schedule:
+        stmt = stmt.where(Product.schedule.in_(schedule))
     if supplier_org_id:
         stmt = stmt.where(Product.supplier_org_id == supplier_org_id)
     if in_stock:

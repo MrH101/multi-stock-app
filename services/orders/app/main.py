@@ -27,6 +27,7 @@ events = EventPublisher(settings.redis_url, settings.event_stream, "orders",
 @asynccontextmanager
 async def lifespan(_app):
     db.create_all()
+    db.ensure_columns("order_lines", {"schedule": "VARCHAR(20)", "mcaz_registration_number": "VARCHAR(60)"})
     yield
 
 
@@ -119,7 +120,8 @@ def checkout(body: schemas.CheckoutRequest, p: Pharmacy, s: DB, catalog: Catalog
                 order.lines.append(OrderLine(
                     product_id=r["product_id"], product_name=r["product_name"], generic_name=r["generic_name"],
                     strength=r["strength"], pack_size=r["pack_size"], quantity=r["quantity"],
-                    unit_price=price, line_total=price * r["quantity"], allocations=r["allocations"]))
+                    unit_price=price, line_total=price * r["quantity"], allocations=r["allocations"],
+                    schedule=r.get("schedule"), mcaz_registration_number=r.get("mcaz_registration_number")))
             order.subtotal = sum((l.line_total for l in order.lines), Decimal("0"))
             order.history.append(OrderEvent(status=OrderStatus.SUBMITTED, note=body.notes, actor_name=p.name,
                                             actor_org_name=p.org_name, at=_now()))

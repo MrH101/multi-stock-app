@@ -117,6 +117,7 @@ def _describe(s: Session, reservations: list[Reservation]) -> list[dict]:
             "product_id": p.id, "product_name": p.name, "generic_name": p.generic_name,
             "strength": p.strength, "pack_size": p.pack_size, "supplier_org_id": p.supplier_org_id,
             "supplier_name": p.supplier_name, "unit_price": p.unit_price, "currency": p.currency,
+            "schedule": p.schedule, "mcaz_registration_number": p.mcaz_registration_number,
             "quantity": 0, "allocations": [],
         })
         line["quantity"] += r.quantity

@@ -63,6 +63,8 @@ class OrderLine(Base):
     quantity: Mapped[int] = mapped_column(Integer)
     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     line_total: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    schedule: Mapped[str | None] = mapped_column(String(20))  # MCAZ supply category at time of order
+    mcaz_registration_number: Mapped[str | None] = mapped_column(String(60))
     # batch numbers + expiry dates allocated by the catalog (traceability for recalls)
     allocations: Mapped[list] = mapped_column(JSON, default=list)
 

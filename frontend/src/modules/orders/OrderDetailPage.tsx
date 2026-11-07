@@ -88,7 +88,7 @@ export default function OrderDetailPage() {
                 <Table.Tbody>
                   {o.lines.map((l) => (
                     <Table.Tr key={l.id}>
-                      <Table.Td><Text fw={500} size="sm">{l.product_name} {l.strength}</Text><Text size="xs" c="dimmed">{l.generic_name}{l.pack_size && ` · ${l.pack_size}`}</Text></Table.Td>
+                      <Table.Td><Text fw={500} size="sm">{l.product_name} {l.strength}</Text><Text size="xs" c="dimmed">{l.generic_name}{l.pack_size && ` · ${l.pack_size}`}{l.schedule && ` · ${l.schedule}`}{l.mcaz_registration_number && ` · MCAZ ${l.mcaz_registration_number}`}</Text></Table.Td>
                       <Table.Td><Stack gap={2}>{l.allocations.map((a) => <Group key={a.batch_number} gap={6}><Text size="xs">{a.batch_number} ×{a.quantity}</Text><ExpiryBadge expiry={a.expiry_date} /></Group>)}</Stack></Table.Td>
                       <Table.Td ta="right">{l.quantity}</Table.Td>
                       <Table.Td ta="right">{money(l.unit_price, o.currency)}</Table.Td>
